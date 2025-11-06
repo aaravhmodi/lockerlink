@@ -295,7 +295,7 @@ export default function ChatWindow({ chatId }: ChatWindowProps) {
                     {/* Timestamp */}
                     {showTime && (
                       <span className={`text-[10px] text-[#9CA3AF] mt-1 px-1 ${isSent ? "text-right" : "text-left"}`}>
-                        {formatTime(message.timestamp)}
+                        {formatTime(toMillis(message.timestamp))}
                       </span>
                     )}
                   </div>
