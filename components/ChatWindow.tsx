@@ -29,11 +29,19 @@ function formatTime(timestamp: number): string {
   return `${displayHours}:${String(minutes).padStart(2, '0')} ${ampm}`;
 }
 
+// Helper to normalize timestamp to milliseconds
+const toMillis = (t: number | { seconds: number; nanoseconds?: number } | undefined): number => {
+  if (!t) return Date.now();
+  if (typeof t === "number") return t;
+  if (typeof t === "object" && "seconds" in t) return t.seconds * 1000;
+  return Date.now();
+};
+
 // Helper to check if messages are from same sender and within 5 minutes
 function shouldGroupMessages(prev: Message | null, current: Message): boolean {
   if (!prev) return false;
   if (prev.senderId !== current.senderId) return false;
-  const timeDiff = current.timestamp - prev.timestamp;
+  const timeDiff = toMillis(current.timestamp) - toMillis(prev.timestamp);
   return timeDiff < 300000; // 5 minutes in milliseconds
 }
 
