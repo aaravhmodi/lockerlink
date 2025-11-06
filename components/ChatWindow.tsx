@@ -4,6 +4,8 @@ import { useEffect, useState, useRef } from "react";
 import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useUser } from "@/hooks/useUser";
+import { motion } from "framer-motion";
+import { HiPaperAirplane } from "react-icons/hi";
 
 interface Message {
   id: string;
@@ -27,7 +29,6 @@ export default function ChatWindow({ chatId }: ChatWindowProps) {
   useEffect(() => {
     if (!user) return;
 
-    // Get other user info
     const fetchChatInfo = async () => {
       try {
         const chatDoc = await getDoc(doc(db, "chats", chatId));
@@ -48,7 +49,6 @@ export default function ChatWindow({ chatId }: ChatWindowProps) {
 
     fetchChatInfo();
 
-    // Listen to messages
     const messagesQuery = query(
       collection(db, "messages"),
       where("chatId", "==", chatId),
@@ -83,7 +83,6 @@ export default function ChatWindow({ chatId }: ChatWindowProps) {
         timestamp: serverTimestamp(),
       });
 
-      // Update chat's lastMessage
       const chatDoc = await getDoc(doc(db, "chats", chatId));
       if (chatDoc.exists()) {
         await updateDoc(doc(db, "chats", chatId), {
@@ -100,56 +99,61 @@ export default function ChatWindow({ chatId }: ChatWindowProps) {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="text-gray-500">Loading chat...</div>
+      <div className="flex h-full items-center justify-center bg-[#F9FAFB]">
+        <div className="text-[#6B7280]">Loading chat...</div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="border-b bg-white p-4">
-        <h2 className="text-lg font-semibold">{otherUserName}</h2>
+    <div className="flex h-full flex-col bg-[#F9FAFB]">
+      <div className="border-b border-[#E5E7EB] bg-white px-6 py-4">
+        <h2 className="text-lg font-semibold text-[#111827]">{otherUserName}</h2>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
-          <div
+      <div className="flex-1 overflow-y-auto p-6 space-y-3">
+        {messages.map((message, index) => (
+          <motion.div
             key={message.id}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.02 }}
             className={`flex ${message.senderId === user?.uid ? "justify-end" : "justify-start"}`}
           >
             <div
-              className={`max-w-xs rounded-lg px-4 py-2 ${
+              className={`max-w-xs rounded-2xl px-4 py-2.5 ${
                 message.senderId === user?.uid
-                  ? "bg-blue-500 text-white"
-                  : "bg-gray-200 text-gray-900"
+                  ? "bg-[#007AFF] text-white"
+                  : "bg-white text-[#111827] border border-[#E5E7EB]"
               }`}
             >
               {message.text}
             </div>
-          </div>
+          </motion.div>
         ))}
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={sendMessage} className="border-t bg-white p-4">
-        <div className="flex gap-2">
+      <form onSubmit={sendMessage} className="border-t border-[#E5E7EB] bg-white p-4">
+        <div className="flex gap-3">
           <input
             type="text"
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
             placeholder="Type a message..."
-            className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none"
+            className="flex-1 rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
           />
-          <button
+          <motion.button
             type="submit"
-            className="rounded-lg bg-blue-500 px-6 py-2 text-white hover:bg-blue-600"
+            disabled={!messageText.trim()}
+            whileHover={{ scale: messageText.trim() ? 1.05 : 1 }}
+            whileTap={{ scale: messageText.trim() ? 0.95 : 1 }}
+            className="rounded-xl bg-[#007AFF] px-5 sm:px-6 py-3 text-white transition-all duration-200 hover:bg-[#0056CC] disabled:bg-[#9CA3AF] disabled:cursor-not-allowed shadow-sm hover:shadow-md touch-manipulation min-h-[44px] min-w-[44px]"
           >
-            Send
-          </button>
+            <HiPaperAirplane className="w-5 h-5" />
+          </motion.button>
         </div>
       </form>
     </div>
   );
 }
-

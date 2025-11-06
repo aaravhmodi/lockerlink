@@ -9,6 +9,8 @@ import Navbar from "@/components/Navbar";
 import FeedCard from "@/components/FeedCard";
 import Image from "next/image";
 import Link from "next/link";
+import { motion } from "framer-motion";
+import { HiChat } from "react-icons/hi";
 
 interface Post {
   id: string;
@@ -44,7 +46,6 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
 
     fetchProfile();
 
-    // Load user's posts
     const postsQuery = query(
       collection(db, "posts"),
       where("userId", "==", params.uid),
@@ -66,7 +67,6 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
     if (!currentUser || !profile) return;
 
     try {
-      // Check if chat already exists
       const chatsQuery = query(
         collection(db, "chats"),
         where("participants", "array-contains", currentUser.uid)
@@ -84,7 +84,6 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
       if (existingChat) {
         router.push(`/messages/${existingChat}`);
       } else {
-        // Create new chat
         const chatRef = await addDoc(collection(db, "chats"), {
           participants: [currentUser.uid, params.uid],
           lastMessage: "",
@@ -99,18 +98,18 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
+      <div className="flex min-h-screen items-center justify-center bg-[#F9FAFB]">
+        <div className="text-[#6B7280]">Loading...</div>
       </div>
     );
   }
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-[#F9FAFB]">
         <Navbar />
-        <div className="mx-auto max-w-2xl px-4 py-8">
-          <div className="text-center text-gray-500">User not found</div>
+        <div className="mx-auto max-w-2xl px-6 py-12">
+          <div className="text-center text-[#6B7280]">User not found</div>
         </div>
       </div>
     );
@@ -119,103 +118,121 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
   const isOwnProfile = currentUser?.uid === params.uid;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#F9FAFB] pb-20 md:pb-0">
       <Navbar />
-      <div className="mx-auto max-w-2xl px-4 py-8">
-        <div className="mb-6 rounded-xl border bg-white shadow-lg overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 h-32"></div>
-          <div className="px-6 pb-6 -mt-16">
-            <div className="flex items-end justify-between mb-4">
-              <div className="h-32 w-32 rounded-full border-4 border-white bg-gray-200 shadow-lg overflow-hidden">
-                    {profile.photoURL ? (
-                      <Image
-                        src={profile.photoURL}
-                        alt={profile.name}
-                        width={128}
-                        height={128}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-5xl text-gray-400 font-semibold">
-                        {profile.name?.[0]?.toUpperCase() || "?"}
-                      </div>
-                    )}
+      <div className="mx-auto max-w-2xl px-4 sm:px-6 py-4 sm:py-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 sm:mb-8 rounded-xl sm:rounded-2xl border border-[#E5E7EB] bg-white shadow-sm overflow-hidden"
+        >
+          <div className="bg-gradient-to-br from-[#007AFF] to-[#0056CC] h-32 sm:h-40"></div>
+          <div className="px-4 sm:px-8 pb-6 sm:pb-8 -mt-16 sm:-mt-20">
+            <div className="flex items-end justify-between mb-6">
+              <div className="h-24 w-24 sm:h-32 sm:w-32 rounded-full border-4 border-white bg-[#F3F4F6] shadow-lg overflow-hidden">
+                {profile.photoURL ? (
+                  <Image
+                    src={profile.photoURL}
+                    alt={profile.name}
+                    width={128}
+                    height={128}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-5xl font-semibold text-[#9CA3AF]">
+                    {profile.name?.[0]?.toUpperCase() || "?"}
+                  </div>
+                )}
               </div>
               {!isOwnProfile && (
-                <button
+                <motion.button
                   onClick={handleStartChat}
-                  className="rounded-lg bg-blue-500 px-6 py-2 text-white font-medium hover:bg-blue-600 transition-colors shadow-md"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="flex items-center gap-2 rounded-xl bg-[#007AFF] px-4 sm:px-6 py-2.5 sm:py-3 text-white font-medium transition-all duration-200 hover:bg-[#0056CC] shadow-md hover:shadow-lg touch-manipulation min-h-[44px] text-sm sm:text-base"
                 >
-                  Message
-                </button>
+                  <HiChat className="w-5 h-5" />
+                  <span className="hidden sm:inline">Message</span>
+                  <span className="sm:hidden">Msg</span>
+                </motion.button>
               )}
               {isOwnProfile && (
                 <Link
                   href="/profile"
-                  className="rounded-lg bg-blue-500 px-6 py-2 text-white font-medium hover:bg-blue-600 transition-colors shadow-md"
+                  className="rounded-xl bg-[#007AFF] px-4 sm:px-6 py-2.5 sm:py-3 text-white font-medium transition-all duration-200 hover:bg-[#0056CC] shadow-md hover:shadow-lg touch-manipulation min-h-[44px] text-sm sm:text-base"
                 >
                   Edit Profile
                 </Link>
               )}
             </div>
 
-            {/* Profile Info */}
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">{profile.name}</h1>
+                <h1 className="text-2xl sm:text-3xl font-semibold text-[#111827]">{profile.name}</h1>
                 {profile.team && (
-                  <p className="text-xl text-gray-600 mt-1">{profile.team}</p>
+                  <p className="text-lg sm:text-xl text-[#6B7280] mt-2">{profile.team}</p>
                 )}
               </div>
 
-              {/* Info Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-200">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 pt-4 sm:pt-6 border-t border-[#E5E7EB]">
                 {profile.age && (
                   <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Age</p>
-                    <p className="text-lg font-semibold text-gray-900 mt-1">{profile.age}</p>
+                    <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">Age</p>
+                    <p className="text-xl font-semibold text-[#111827]">{profile.age}</p>
                   </div>
                 )}
                 {profile.position && (
                   <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Position</p>
-                    <p className="text-lg font-semibold text-gray-900 mt-1">{profile.position}</p>
+                    <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">Position</p>
+                    <p className="text-xl font-semibold text-[#111827]">{profile.position}</p>
                   </div>
                 )}
                 {profile.sport && (
                   <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Sport</p>
-                    <p className="text-lg font-semibold text-gray-900 mt-1">{profile.sport}</p>
+                    <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">Sport</p>
+                    <p className="text-xl font-semibold text-[#111827]">{profile.sport}</p>
                   </div>
                 )}
                 {profile.city && (
                   <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">City</p>
-                    <p className="text-lg font-semibold text-gray-900 mt-1">{profile.city}</p>
+                    <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">City</p>
+                    <p className="text-xl font-semibold text-[#111827]">{profile.city}</p>
                   </div>
                 )}
               </div>
 
-              {/* Bio */}
               {profile.bio && (
-                <div className="pt-4 border-t border-gray-200">
-                  <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">About</p>
-                  <p className="text-gray-700 leading-relaxed">{profile.bio}</p>
+                <div className="pt-6 border-t border-[#E5E7EB]">
+                  <p className="text-sm font-semibold text-[#6B7280] uppercase tracking-wide mb-3">About</p>
+                  <p className="text-[#111827] leading-relaxed">{profile.bio}</p>
                 </div>
               )}
             </div>
           </div>
-        </div>
+        </motion.div>
 
         <div>
-          <h2 className="mb-4 text-xl font-semibold text-gray-900">Posts</h2>
+          <h2 className="mb-4 sm:mb-6 text-xl sm:text-2xl font-semibold text-[#111827]">Posts</h2>
           <div className="space-y-4">
             {posts.length === 0 ? (
-              <div className="rounded-lg border bg-white p-8 text-center text-gray-500">
-                No posts yet
-              </div>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="rounded-xl sm:rounded-2xl border border-[#E5E7EB] bg-white p-8 sm:p-12 text-center"
+              >
+                <p className="text-[#6B7280]">No posts yet</p>
+              </motion.div>
             ) : (
-              posts.map((post) => <FeedCard key={post.id} post={post} />)
+              posts.map((post, index) => (
+                <motion.div
+                  key={post.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                >
+                  <FeedCard post={post} />
+                </motion.div>
+              ))
             )}
           </div>
         </div>
@@ -223,4 +240,3 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
     </div>
   );
 }
-

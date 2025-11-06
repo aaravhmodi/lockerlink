@@ -6,6 +6,8 @@ import { db } from "@/lib/firebase";
 import { useUser } from "@/hooks/useUser";
 import Link from "next/link";
 import { doc, getDoc } from "firebase/firestore";
+import { motion } from "framer-motion";
+import Image from "next/image";
 
 interface Chat {
   id: string;
@@ -68,9 +70,9 @@ export default function ChatList() {
 
   if (loading) {
     return (
-      <div className="space-y-2">
+      <div className="space-y-3">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-16 animate-pulse rounded-lg bg-gray-200"></div>
+          <div key={i} className="h-20 animate-pulse rounded-2xl bg-[#F3F4F6]"></div>
         ))}
       </div>
     );
@@ -78,43 +80,50 @@ export default function ChatList() {
 
   if (chats.length === 0) {
     return (
-      <div className="flex h-64 items-center justify-center text-gray-500">
-        No conversations yet. Start chatting from Explore!
+      <div className="flex h-64 items-center justify-center rounded-2xl border border-[#E5E7EB] bg-white">
+        <p className="text-[#6B7280]">No conversations yet. Start chatting from Explore!</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-2">
-      {chats.map((chat) => (
-        <Link
+    <div className="space-y-3">
+      {chats.map((chat, index) => (
+        <motion.div
           key={chat.id}
-          href={`/messages/${chat.id}`}
-          className="flex items-center gap-3 rounded-lg border bg-white p-4 shadow-sm hover:bg-gray-50 transition-colors"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: index * 0.05 }}
         >
-          <div className="h-12 w-12 overflow-hidden rounded-full bg-gray-200">
-            {chat.otherUserPhoto ? (
-              <img
-                src={chat.otherUserPhoto}
-                alt={chat.otherUserName}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-gray-400">
-                {chat.otherUserName[0]}
-              </div>
-            )}
-          </div>
-          <div className="flex-1">
-            <div className="font-semibold text-gray-900">{chat.otherUserName}</div>
-            <div className="text-sm text-gray-500 truncate">{chat.lastMessage || "No messages yet"}</div>
-          </div>
-          <div className="text-xs text-gray-400">
-            {new Date(chat.updatedAt * 1000).toLocaleDateString()}
-          </div>
-        </Link>
+          <Link
+            href={`/messages/${chat.id}`}
+            className="flex items-center gap-4 rounded-2xl border border-[#E5E7EB] bg-white p-4 transition-all duration-200 hover:shadow-md hover:border-[#007AFF]/20"
+          >
+            <div className="h-14 w-14 overflow-hidden rounded-full bg-[#F3F4F6] border-2 border-[#E5E7EB]">
+              {chat.otherUserPhoto ? (
+                <Image
+                  src={chat.otherUserPhoto}
+                  alt={chat.otherUserName}
+                  width={56}
+                  height={56}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-[#9CA3AF]">
+                  {chat.otherUserName[0]}
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-[#111827] truncate">{chat.otherUserName}</div>
+              <div className="text-sm text-[#6B7280] truncate">{chat.lastMessage || "No messages yet"}</div>
+            </div>
+            <div className="text-xs text-[#9CA3AF] whitespace-nowrap">
+              {new Date(chat.updatedAt * 1000).toLocaleDateString()}
+            </div>
+          </Link>
+        </motion.div>
       ))}
     </div>
   );
 }
-

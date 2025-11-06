@@ -7,6 +7,8 @@ import { db, auth } from "@/lib/firebase";
 import { collection, addDoc, query, getDocs, where, serverTimestamp } from "firebase/firestore";
 import Navbar from "@/components/Navbar";
 import ChatList from "@/components/ChatList";
+import { motion } from "framer-motion";
+import { HiPlus } from "react-icons/hi";
 
 export default function MessagesPage() {
   const { user, loading } = useUser();
@@ -24,7 +26,6 @@ export default function MessagesPage() {
   useEffect(() => {
     if (!user) return;
 
-    // Load all users for creating new chat
     const fetchUsers = async () => {
       try {
         const usersSnapshot = await getDocs(collection(db, "users"));
@@ -46,7 +47,6 @@ export default function MessagesPage() {
     if (!user || !selectedUserId) return;
 
     try {
-      // Check if chat already exists
       const chatsQuery = query(
         collection(db, "chats"),
         where("participants", "array-contains", user.uid)
@@ -64,7 +64,6 @@ export default function MessagesPage() {
       if (existingChat) {
         router.push(`/messages/${existingChat}`);
       } else {
-        // Create new chat
         const chatRef = await addDoc(collection(db, "chats"), {
           participants: [user.uid, selectedUserId],
           lastMessage: "",
@@ -82,39 +81,52 @@ export default function MessagesPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
+      <div className="flex min-h-screen items-center justify-center bg-[#F9FAFB]">
+        <div className="text-[#6B7280]">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#F9FAFB] pb-20 md:pb-0">
       <Navbar />
-      <div className="mx-auto max-w-4xl px-4 py-8">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 transition-colors"
+      <div className="mx-auto max-w-4xl px-4 sm:px-6 py-4 sm:py-8">
+        <div className="mb-6 sm:mb-8 flex items-center justify-between">
+          <motion.h1
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-2xl sm:text-3xl font-semibold text-[#111827]"
           >
-            + New Message
-          </button>
+            Messages
+          </motion.h1>
+          <motion.button
+            onClick={() => setShowCreateModal(true)}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="flex items-center gap-2 rounded-xl bg-[#007AFF] px-4 sm:px-5 py-2.5 text-white font-medium transition-all duration-200 hover:bg-[#0056CC] shadow-sm hover:shadow-md touch-manipulation min-h-[44px]"
+          >
+            <HiPlus className="w-5 h-5" />
+            <span className="hidden sm:inline">New Message</span>
+            <span className="sm:hidden">New</span>
+          </motion.button>
         </div>
 
-        {/* Create Chat Modal */}
         {showCreateModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-              <h2 className="text-xl font-bold mb-4">Start a New Conversation</h2>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl border border-[#E5E7EB]"
+            >
+              <h2 className="text-2xl font-semibold mb-6 text-[#111827]">Start a New Conversation</h2>
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-[#111827] mb-2">
                   Select a user
                 </label>
                 <select
                   value={selectedUserId}
                   onChange={(e) => setSelectedUserId(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
                 >
                   <option value="">Choose a user...</option>
                   {users.map((u) => (
@@ -125,24 +137,28 @@ export default function MessagesPage() {
                 </select>
               </div>
               <div className="flex gap-3">
-                <button
+                <motion.button
                   onClick={createChat}
                   disabled={!selectedUserId}
-                  className="flex-1 rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  whileHover={{ scale: !selectedUserId ? 1 : 1.02 }}
+                  whileTap={{ scale: !selectedUserId ? 1 : 0.98 }}
+                  className="flex-1 rounded-xl bg-[#007AFF] px-4 py-3 text-white font-medium transition-all duration-200 hover:bg-[#0056CC] disabled:bg-[#9CA3AF] disabled:cursor-not-allowed shadow-sm hover:shadow-md touch-manipulation min-h-[44px]"
                 >
                   Start Chat
-                </button>
-                <button
+                </motion.button>
+                <motion.button
                   onClick={() => {
                     setShowCreateModal(false);
                     setSelectedUserId("");
                   }}
-                  className="flex-1 rounded-md border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex-1 rounded-xl border border-[#E5E7EB] px-4 py-3 text-[#111827] font-medium transition-all duration-200 hover:bg-[#F9FAFB] touch-manipulation min-h-[44px]"
                 >
                   Cancel
-                </button>
+                </motion.button>
               </div>
-            </div>
+            </motion.div>
           </div>
         )}
 
@@ -151,4 +167,3 @@ export default function MessagesPage() {
     </div>
   );
 }
-

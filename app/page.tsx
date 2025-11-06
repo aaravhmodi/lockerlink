@@ -7,6 +7,8 @@ import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithP
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { useState } from "react";
+import { motion } from "framer-motion";
+import { FcGoogle } from "react-icons/fc";
 
 export default function LoginPage() {
   const { user, loading } = useUser();
@@ -31,7 +33,6 @@ export default function LoginPage() {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // Create user profile in Firestore
         await setDoc(doc(db, "users", user.uid), {
           uid: user.uid,
           name: user.email?.split("@")[0] || "New User",
@@ -64,10 +65,8 @@ export default function LoginPage() {
       const userCredential = await signInWithPopup(auth, provider);
       const user = userCredential.user;
 
-      // Check if user profile exists
       const userDoc = await getDoc(doc(db, "users", user.uid));
       if (!userDoc.exists()) {
-        // Create user profile
         await setDoc(doc(db, "users", user.uid), {
           uid: user.uid,
           name: user.displayName || "New User",
@@ -92,76 +91,99 @@ export default function LoginPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
+      <div className="flex min-h-screen items-center justify-center bg-[#F9FAFB]">
+        <div className="text-[#6B7280]">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md rounded-lg border bg-white p-8 shadow-lg">
-        <h1 className="mb-6 text-center text-3xl font-bold text-gray-900">LockerLink</h1>
-        <p className="mb-6 text-center text-gray-600">Connect with OVA volleyball players</p>
+    <div className="flex min-h-screen items-center justify-center bg-[#F9FAFB] px-4 py-8">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="w-full max-w-md rounded-xl sm:rounded-2xl bg-white p-6 sm:p-8 shadow-lg"
+      >
+        <div className="mb-8 text-center">
+          <h1 className="mb-2 text-3xl font-semibold text-[#111827]">LockerLink</h1>
+          <p className="text-[#6B7280]">Connect with OVA volleyball players</p>
+        </div>
 
         {error && (
-          <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-600">{error}</div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="mb-6 rounded-xl bg-[#FEF2F2] border border-[#FECACA] p-4 text-sm text-[#DC2626]"
+          >
+            {error}
+          </motion.div>
         )}
 
-        <form onSubmit={handleEmailAuth} className="space-y-4">
+        <form onSubmit={handleEmailAuth} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Email</label>
+            <label className="mb-2 block text-sm font-medium text-[#111827]">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+              className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+              placeholder="name@example.com"
+              inputMode="email"
+              autoComplete="email"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Password</label>
+            <label className="mb-2 block text-sm font-medium text-[#111827]">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+              className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+              placeholder="••••••••"
+              autoComplete="current-password"
             />
           </div>
 
-          <button
+          <motion.button
             type="submit"
-            className="w-full rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="w-full rounded-xl bg-[#007AFF] px-4 py-3.5 text-white font-medium transition-all duration-200 hover:bg-[#0056CC] active:scale-95 touch-manipulation min-h-[44px]"
           >
             {isSignUp ? "Sign Up" : "Sign In"}
-          </button>
+          </motion.button>
         </form>
 
-        <div className="my-4 flex items-center">
-          <div className="flex-1 border-t border-gray-300"></div>
-          <span className="px-4 text-sm text-gray-500">or</span>
-          <div className="flex-1 border-t border-gray-300"></div>
+        <div className="my-6 flex items-center">
+          <div className="flex-1 border-t border-[#E5E7EB]"></div>
+          <span className="px-4 text-sm text-[#9CA3AF]">or</span>
+          <div className="flex-1 border-t border-[#E5E7EB]"></div>
         </div>
 
-        <button
+        <motion.button
           onClick={handleGoogleAuth}
-          className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-gray-700 hover:bg-gray-50"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+            className="w-full flex items-center justify-center gap-3 rounded-xl border border-[#E5E7EB] bg-white px-4 py-3.5 text-[#111827] font-medium transition-all duration-200 hover:bg-[#F9FAFB] hover:shadow-sm active:scale-95 touch-manipulation min-h-[44px]"
         >
+          <FcGoogle className="w-5 h-5" />
           Continue with Google
-        </button>
+        </motion.button>
 
-        <p className="mt-4 text-center text-sm text-gray-600">
+        <p className="mt-6 text-center text-sm text-[#6B7280]">
           {isSignUp ? "Already have an account? " : "Don't have an account? "}
           <button
             onClick={() => setIsSignUp(!isSignUp)}
-            className="text-blue-500 hover:text-blue-600"
+            className="font-medium text-[#007AFF] hover:text-[#0056CC] transition-colors"
           >
             {isSignUp ? "Sign In" : "Sign Up"}
           </button>
         </p>
-      </div>
+      </motion.div>
     </div>
   );
 }
