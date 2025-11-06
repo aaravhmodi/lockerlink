@@ -40,6 +40,7 @@ export default function LoginPage() {
           age: 17,
           city: "",
           position: "",
+          sport: "Volleyball",
           bio: "",
           photoURL: "",
           createdAt: Math.floor(Date.now() / 1000),
@@ -76,6 +77,7 @@ export default function LoginPage() {
           age: 17,
           city: "",
           position: "",
+          sport: "Volleyball",
           bio: "",
           createdAt: Math.floor(Date.now() / 1000),
         });

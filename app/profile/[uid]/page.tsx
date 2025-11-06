@@ -122,36 +122,29 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <div className="mx-auto max-w-2xl px-4 py-8">
-        <div className="mb-6 rounded-lg border bg-white p-6 shadow-sm">
-          <div className="flex items-start gap-6">
-            <div className="h-24 w-24 overflow-hidden rounded-full bg-gray-200">
-              {profile.photoURL ? (
-                <Image
-                  src={profile.photoURL}
-                  alt={profile.name}
-                  width={96}
-                  height={96}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-2xl text-gray-400">
-                  {profile.name?.[0] || "?"}
-                </div>
-              )}
-            </div>
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold text-gray-900">{profile.name}</h1>
-              {profile.team && <p className="text-lg text-gray-600">{profile.team}</p>}
-              {profile.position && (
-                <p className="text-sm text-gray-500">Position: {profile.position}</p>
-              )}
-              {profile.city && <p className="text-sm text-gray-500">City: {profile.city}</p>}
-              {profile.age && <p className="text-sm text-gray-500">Age: {profile.age}</p>}
-              {profile.bio && <p className="mt-4 text-gray-700">{profile.bio}</p>}
+        <div className="mb-6 rounded-xl border bg-white shadow-lg overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 h-32"></div>
+          <div className="px-6 pb-6 -mt-16">
+            <div className="flex items-end justify-between mb-4">
+              <div className="h-32 w-32 rounded-full border-4 border-white bg-gray-200 shadow-lg overflow-hidden">
+                    {profile.photoURL ? (
+                      <Image
+                        src={profile.photoURL}
+                        alt={profile.name}
+                        width={128}
+                        height={128}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-5xl text-gray-400 font-semibold">
+                        {profile.name?.[0]?.toUpperCase() || "?"}
+                      </div>
+                    )}
+              </div>
               {!isOwnProfile && (
                 <button
                   onClick={handleStartChat}
-                  className="mt-4 rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+                  className="rounded-lg bg-blue-500 px-6 py-2 text-white font-medium hover:bg-blue-600 transition-colors shadow-md"
                 >
                   Message
                 </button>
@@ -159,10 +152,56 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
               {isOwnProfile && (
                 <Link
                   href="/profile"
-                  className="mt-4 inline-block rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+                  className="rounded-lg bg-blue-500 px-6 py-2 text-white font-medium hover:bg-blue-600 transition-colors shadow-md"
                 >
                   Edit Profile
                 </Link>
+              )}
+            </div>
+
+            {/* Profile Info */}
+            <div className="space-y-4">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">{profile.name}</h1>
+                {profile.team && (
+                  <p className="text-xl text-gray-600 mt-1">{profile.team}</p>
+                )}
+              </div>
+
+              {/* Info Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-200">
+                {profile.age && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Age</p>
+                    <p className="text-lg font-semibold text-gray-900 mt-1">{profile.age}</p>
+                  </div>
+                )}
+                {profile.position && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Position</p>
+                    <p className="text-lg font-semibold text-gray-900 mt-1">{profile.position}</p>
+                  </div>
+                )}
+                {profile.sport && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Sport</p>
+                    <p className="text-lg font-semibold text-gray-900 mt-1">{profile.sport}</p>
+                  </div>
+                )}
+                {profile.city && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">City</p>
+                    <p className="text-lg font-semibold text-gray-900 mt-1">{profile.city}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Bio */}
+              {profile.bio && (
+                <div className="pt-4 border-t border-gray-200">
+                  <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">About</p>
+                  <p className="text-gray-700 leading-relaxed">{profile.bio}</p>
+                </div>
               )}
             </div>
           </div>
