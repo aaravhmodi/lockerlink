@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
 import { doc, getDoc, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
@@ -20,7 +20,8 @@ interface Post {
   createdAt: number;
 }
 
-export default function UserProfilePage({ params }: { params: { uid: string } }) {
+export default function UserProfilePage({ params }: { params: Promise<{ uid: string }> }) {
+  const { uid } = use(params);
   const { user: currentUser, loading } = useUser();
   const router = useRouter();
   const [profile, setProfile] = useState<any>(null);
@@ -35,7 +36,7 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const userDoc = await getDoc(doc(db, "users", params.uid));
+        const userDoc = await getDoc(doc(db, "users", uid));
         if (userDoc.exists()) {
           setProfile(userDoc.data());
         }
@@ -48,7 +49,7 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
 
     const postsQuery = query(
       collection(db, "posts"),
-      where("userId", "==", params.uid),
+      where("userId", "==", uid),
       orderBy("createdAt", "desc")
     );
 
@@ -61,12 +62,13 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
     });
 
     return () => unsubscribe();
-  }, [params.uid]);
+  }, [uid]);
 
   const handleStartChat = async () => {
     if (!currentUser || !profile) return;
 
     try {
+      // Check if chat already exists
       const chatsQuery = query(
         collection(db, "chats"),
         where("participants", "array-contains", currentUser.uid)
@@ -76,23 +78,29 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
       let existingChat = null;
       snapshot.forEach((doc) => {
         const chat = doc.data();
-        if (chat.participants.includes(params.uid)) {
+        if (chat.participants && chat.participants.includes(uid)) {
           existingChat = doc.id;
         }
       });
 
       if (existingChat) {
+        // Chat exists, navigate to it
         router.push(`/messages/${existingChat}`);
       } else {
+        // Create new chat automatically
         const chatRef = await addDoc(collection(db, "chats"), {
-          participants: [currentUser.uid, params.uid],
+          participants: [currentUser.uid, uid],
           lastMessage: "",
           updatedAt: serverTimestamp(),
+          createdAt: serverTimestamp(),
         });
+        
+        console.log("Chat created successfully:", chatRef.id);
         router.push(`/messages/${chatRef.id}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error starting chat:", error);
+      alert(`Error starting chat: ${error.message || "Please try again."}`);
     }
   };
 
@@ -115,7 +123,7 @@ export default function UserProfilePage({ params }: { params: { uid: string } })
     );
   }
 
-  const isOwnProfile = currentUser?.uid === params.uid;
+  const isOwnProfile = currentUser?.uid === uid;
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] pb-20 md:pb-0">

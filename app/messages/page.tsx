@@ -47,6 +47,7 @@ export default function MessagesPage() {
     if (!user || !selectedUserId) return;
 
     try {
+      // Check if chat already exists
       const chatsQuery = query(
         collection(db, "chats"),
         where("participants", "array-contains", user.uid)
@@ -56,26 +57,32 @@ export default function MessagesPage() {
       let existingChat = null;
       snapshot.forEach((doc) => {
         const chat = doc.data();
-        if (chat.participants.includes(selectedUserId)) {
+        if (chat.participants && chat.participants.includes(selectedUserId)) {
           existingChat = doc.id;
         }
       });
 
       if (existingChat) {
+        // Chat already exists, navigate to it
         router.push(`/messages/${existingChat}`);
       } else {
+        // Create new chat
         const chatRef = await addDoc(collection(db, "chats"), {
           participants: [user.uid, selectedUserId],
           lastMessage: "",
           updatedAt: serverTimestamp(),
+          createdAt: serverTimestamp(),
         });
+        
+        console.log("Chat created successfully:", chatRef.id);
         router.push(`/messages/${chatRef.id}`);
       }
+      
       setShowCreateModal(false);
       setSelectedUserId("");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating chat:", error);
-      alert("Error creating chat");
+      alert(`Error creating chat: ${error.message || "Please try again."}`);
     }
   };
 

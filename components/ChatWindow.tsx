@@ -6,6 +6,7 @@ import { db } from "@/lib/firebase";
 import { useUser } from "@/hooks/useUser";
 import { motion } from "framer-motion";
 import { HiPaperAirplane } from "react-icons/hi";
+import Image from "next/image";
 
 interface Message {
   id: string;
@@ -18,13 +19,35 @@ interface ChatWindowProps {
   chatId: string;
 }
 
+// Helper to format time
+function formatTime(timestamp: number): string {
+  const date = new Date(timestamp);
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours % 12 || 12;
+  return `${displayHours}:${String(minutes).padStart(2, '0')} ${ampm}`;
+}
+
+// Helper to check if messages are from same sender and within 5 minutes
+function shouldGroupMessages(prev: Message | null, current: Message): boolean {
+  if (!prev) return false;
+  if (prev.senderId !== current.senderId) return false;
+  const timeDiff = current.timestamp - prev.timestamp;
+  return timeDiff < 300000; // 5 minutes in milliseconds
+}
+
 export default function ChatWindow({ chatId }: ChatWindowProps) {
   const { user } = useUser();
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageText, setMessageText] = useState("");
-  const [otherUserName, setOtherUserName] = useState("");
+  const [otherUser, setOtherUser] = useState<{ name: string; photoURL?: string } | null>(null);
+  const [currentUserPhoto, setCurrentUserPhoto] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -38,31 +61,63 @@ export default function ChatWindow({ chatId }: ChatWindowProps) {
           if (otherUserId) {
             const userDoc = await getDoc(doc(db, "users", otherUserId));
             if (userDoc.exists()) {
-              setOtherUserName(userDoc.data().name || "Unknown");
+              const userData = userDoc.data();
+              setOtherUser({
+                name: userData.name || "Unknown",
+                photoURL: userData.photoURL,
+              });
             }
           }
+          
+          // Get current user's photo
+          const currentUserDoc = await getDoc(doc(db, "users", user.uid));
+          if (currentUserDoc.exists()) {
+            setCurrentUserPhoto(currentUserDoc.data().photoURL || "");
+          }
+        } else {
+          setError("Chat not found");
         }
       } catch (error) {
         console.error("Error fetching chat info:", error);
+        setError("Failed to load chat");
       }
     };
 
     fetchChatInfo();
 
+    // Listen to messages in real-time from subcollection
+    const messagesRef = collection(db, "chats", chatId, "messages");
     const messagesQuery = query(
-      collection(db, "messages"),
-      where("chatId", "==", chatId),
+      messagesRef,
       orderBy("timestamp", "asc")
     );
 
-    const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-      const messagesData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Message[];
-      setMessages(messagesData);
-      setLoading(false);
-    });
+    const unsubscribe = onSnapshot(
+      messagesQuery,
+      (snapshot) => {
+        const messagesData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Message[];
+        
+        // Convert Firestore timestamps to numbers
+        const processedMessages = messagesData.map((msg) => ({
+          ...msg,
+          timestamp: msg.timestamp?.seconds 
+            ? msg.timestamp.seconds * 1000 
+            : (typeof msg.timestamp === 'number' ? msg.timestamp : Date.now()),
+        }));
+        
+        setMessages(processedMessages);
+        setLoading(false);
+        setError("");
+      },
+      (error) => {
+        console.error("Error listening to messages:", error);
+        setError("Failed to load messages");
+        setLoading(false);
+      }
+    );
 
     return () => unsubscribe();
   }, [chatId, user]);
@@ -73,87 +128,213 @@ export default function ChatWindow({ chatId }: ChatWindowProps) {
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!messageText.trim() || !user) return;
+    if (!messageText.trim() || !user || sending) return;
+
+    setSending(true);
+    setError("");
 
     try {
-      await addDoc(collection(db, "messages"), {
-        chatId,
+      // Verify chat exists and user is a participant
+      const chatDoc = await getDoc(doc(db, "chats", chatId));
+      if (!chatDoc.exists()) {
+        setError("Chat not found");
+        setSending(false);
+        return;
+      }
+
+      const chat = chatDoc.data();
+      if (!chat.participants.includes(user.uid)) {
+        setError("You are not a participant in this chat");
+        setSending(false);
+        return;
+      }
+
+      // Create message in subcollection
+      const messagesRef = collection(db, "chats", chatId, "messages");
+      await addDoc(messagesRef, {
         senderId: user.uid,
         text: messageText.trim(),
         timestamp: serverTimestamp(),
       });
 
-      const chatDoc = await getDoc(doc(db, "chats", chatId));
-      if (chatDoc.exists()) {
-        await updateDoc(doc(db, "chats", chatId), {
-          lastMessage: messageText.trim(),
-          updatedAt: serverTimestamp(),
-        });
-      }
+      // Update chat's lastMessage and updatedAt
+      await updateDoc(doc(db, "chats", chatId), {
+        lastMessage: messageText.trim(),
+        updatedAt: serverTimestamp(),
+      });
 
       setMessageText("");
-    } catch (error) {
+      inputRef.current?.focus();
+    } catch (error: any) {
       console.error("Error sending message:", error);
+      setError(error.message || "Failed to send message. Please try again.");
+    } finally {
+      setSending(false);
     }
   };
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center bg-[#F9FAFB]">
+      <div className="flex h-full items-center justify-center bg-white">
         <div className="text-[#6B7280]">Loading chat...</div>
       </div>
     );
   }
 
+  if (error && !messages.length) {
+    return (
+      <div className="flex h-full items-center justify-center bg-white">
+        <div className="text-center">
+          <p className="text-[#FF3B30] mb-2">{error}</p>
+          <p className="text-sm text-[#6B7280]">Please refresh the page</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-full flex-col bg-[#F9FAFB]">
-      <div className="border-b border-[#E5E7EB] bg-white px-6 py-4">
-        <h2 className="text-lg font-semibold text-[#111827]">{otherUserName}</h2>
+    <div className="flex h-full flex-col bg-white">
+      {/* Header - Instagram style */}
+      <div className="flex items-center gap-2 sm:gap-3 border-b border-[#E5E7EB] bg-white px-3 sm:px-4 py-2.5 sm:py-3">
+        {otherUser?.photoURL ? (
+          <div className="h-7 w-7 sm:h-8 sm:w-8 overflow-hidden rounded-full flex-shrink-0">
+            <Image
+              src={otherUser.photoURL}
+              alt={otherUser.name}
+              width={32}
+              height={32}
+              className="h-full w-full object-cover"
+            />
+          </div>
+        ) : (
+          <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-[#E5E7EB] flex items-center justify-center flex-shrink-0">
+            <span className="text-xs sm:text-sm font-semibold text-[#6B7280]">
+              {otherUser?.name?.[0]?.toUpperCase() || "?"}
+            </span>
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <h2 className="text-sm font-semibold text-[#111827] truncate">{otherUser?.name || "Unknown"}</h2>
+          <p className="text-xs text-[#6B7280]">Active</p>
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-3">
-        {messages.map((message, index) => (
-          <motion.div
-            key={message.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.02 }}
-            className={`flex ${message.senderId === user?.uid ? "justify-end" : "justify-start"}`}
-          >
-            <div
-              className={`max-w-xs rounded-2xl px-4 py-2.5 ${
-                message.senderId === user?.uid
-                  ? "bg-[#007AFF] text-white"
-                  : "bg-white text-[#111827] border border-[#E5E7EB]"
-              }`}
-            >
-              {message.text}
+      {/* Messages Area - Instagram style */}
+      <div className="flex-1 overflow-y-auto bg-[#FAFAFA] px-3 sm:px-4 py-4 sm:py-6">
+        <div className="space-y-1">
+          {messages.length === 0 ? (
+            <div className="flex h-full items-center justify-center">
+              <div className="text-center">
+                <p className="text-[#6B7280] mb-1">No messages yet</p>
+                <p className="text-xs text-[#9CA3AF]">Start the conversation!</p>
+              </div>
             </div>
-          </motion.div>
-        ))}
+          ) : (
+            messages.map((message, index) => {
+              const isSent = message.senderId === user?.uid;
+              const prevMessage = index > 0 ? messages[index - 1] : null;
+              const showAvatar = !isSent && !shouldGroupMessages(prevMessage, message);
+              const showTime = index === messages.length - 1 || 
+                !shouldGroupMessages(message, messages[index + 1]);
+
+              return (
+                <motion.div
+                  key={message.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className={`flex items-end gap-1.5 sm:gap-2 ${isSent ? "justify-end" : "justify-start"} ${showAvatar ? "mt-4" : "mt-0.5"}`}
+                >
+                  {/* Avatar for received messages */}
+                  {showAvatar && !isSent && (
+                    <div className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0 overflow-hidden rounded-full mb-1">
+                      {otherUser?.photoURL ? (
+                        <Image
+                          src={otherUser.photoURL}
+                          alt={otherUser.name}
+                          width={24}
+                          height={24}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-full w-full bg-[#E5E7EB] flex items-center justify-center">
+                          <span className="text-xs font-semibold text-[#6B7280]">
+                            {otherUser?.name?.[0]?.toUpperCase() || "?"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Spacer for sent messages to align properly */}
+                  {isSent && <div className="w-5 sm:w-6 flex-shrink-0" />}
+
+                  <div className={`flex flex-col ${isSent ? "items-end" : "items-start"} max-w-[85%] sm:max-w-[75%]`}>
+                    {/* Message bubble */}
+                    <div
+                      className={`rounded-2xl px-3 py-2 sm:px-4 sm:py-2 ${
+                        isSent
+                          ? "bg-[#007AFF] text-white rounded-br-sm"
+                          : "bg-white text-[#111827] border border-[#E5E7EB] rounded-bl-sm"
+                      }`}
+                    >
+                      <p className="text-sm leading-relaxed break-words">{message.text}</p>
+                    </div>
+                    
+                    {/* Timestamp */}
+                    {showTime && (
+                      <span className={`text-[10px] text-[#9CA3AF] mt-1 px-1 ${isSent ? "text-right" : "text-left"}`}>
+                        {formatTime(message.timestamp)}
+                      </span>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })
+          )}
+        </div>
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={sendMessage} className="border-t border-[#E5E7EB] bg-white p-4">
-        <div className="flex gap-3">
-          <input
-            type="text"
-            value={messageText}
-            onChange={(e) => setMessageText(e.target.value)}
-            placeholder="Type a message..."
-            className="flex-1 rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
-          />
-          <motion.button
-            type="submit"
-            disabled={!messageText.trim()}
-            whileHover={{ scale: messageText.trim() ? 1.05 : 1 }}
-            whileTap={{ scale: messageText.trim() ? 0.95 : 1 }}
-            className="rounded-xl bg-[#007AFF] px-5 sm:px-6 py-3 text-white transition-all duration-200 hover:bg-[#0056CC] disabled:bg-[#9CA3AF] disabled:cursor-not-allowed shadow-sm hover:shadow-md touch-manipulation min-h-[44px] min-w-[44px]"
-          >
-            <HiPaperAirplane className="w-5 h-5" />
-          </motion.button>
+      {/* Input Area - Instagram style */}
+      {error && messages.length > 0 && (
+        <div className="px-4 py-2 bg-[#FEF2F2] border-t border-[#FECACA]">
+          <p className="text-xs text-[#DC2626]">{error}</p>
+        </div>
+      )}
+
+      <form onSubmit={sendMessage} className="border-t border-[#E5E7EB] bg-white px-3 sm:px-4 py-2.5 sm:py-3">
+        <div className="flex items-end gap-2">
+          <div className="flex-1 relative">
+            <input
+              ref={inputRef}
+              type="text"
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              placeholder="Message..."
+              disabled={sending}
+              className="w-full rounded-full border border-[#E5E7EB] bg-[#FAFAFA] px-3 sm:px-4 py-2 sm:py-2.5 pr-10 sm:pr-12 text-sm text-[#111827] placeholder:text-[#9CA3AF] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-1 focus:ring-[#007AFF]/20 touch-manipulation disabled:bg-[#F3F4F6] disabled:cursor-not-allowed"
+            />
+            <motion.button
+              type="submit"
+              disabled={!messageText.trim() || sending}
+              whileHover={{ scale: messageText.trim() && !sending ? 1.1 : 1 }}
+              whileTap={{ scale: messageText.trim() && !sending ? 0.9 : 1 }}
+              className="absolute right-1.5 sm:right-2 bottom-1.5 sm:bottom-2 rounded-full bg-[#007AFF] p-1.5 text-white transition-all duration-200 hover:bg-[#0056CC] disabled:bg-[#9CA3AF] disabled:cursor-not-allowed touch-manipulation min-h-[32px] min-w-[32px] flex items-center justify-center"
+            >
+              {sending ? (
+                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : (
+                <HiPaperAirplane className="w-4 h-4" />
+              )}
+            </motion.button>
+          </div>
         </div>
       </form>
     </div>
   );
 }
+

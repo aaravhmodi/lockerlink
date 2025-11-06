@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
 import Navbar from "@/components/Navbar";
@@ -9,7 +9,8 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { HiArrowLeft } from "react-icons/hi";
 
-export default function ChatPage({ params }: { params: { chatId: string } }) {
+export default function ChatPage({ params }: { params: Promise<{ chatId: string }> }) {
+  const { chatId } = use(params);
   const { user, loading } = useUser();
   const router = useRouter();
 
@@ -49,7 +50,7 @@ export default function ChatPage({ params }: { params: { chatId: string } }) {
           transition={{ delay: 0.1 }}
           className="h-[calc(100vh-12rem)] sm:h-[600px] rounded-xl sm:rounded-2xl border border-[#E5E7EB] bg-white shadow-sm overflow-hidden"
         >
-          <ChatWindow chatId={params.chatId} />
+          <ChatWindow chatId={chatId} />
         </motion.div>
       </div>
     </div>

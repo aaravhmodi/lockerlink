@@ -1,21 +1,56 @@
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // User profiles - anyone can read, only owner can write
     match /users/{userId} {
       allow read: if true;
       allow write: if request.auth.uid == userId;
     }
     
+    // Posts - authenticated users can read/write
     match /posts/{postId} {
       allow read, write: if request.auth.uid != null;
     }
     
+    // Chats - participants can read, authenticated users can create
     match /chats/{chatId} {
-      allow read, write: if request.auth.uid in resource.data.participants;
+      // Allow read if user is a participant
+      allow read: if request.auth.uid != null && 
+        (request.auth.uid in resource.data.participants || 
+         request.auth.uid in request.resource.data.participants);
+      
+      // Allow create if user is authenticated and is in participants array
+      allow create: if request.auth.uid != null && 
+        request.auth.uid in request.resource.data.participants;
+      
+      // Allow update if user is a participant
+      allow update: if request.auth.uid != null && 
+        request.auth.uid in resource.data.participants;
+      
+      // Allow delete if user is a participant
+      allow delete: if request.auth.uid != null && 
+        request.auth.uid in resource.data.participants;
+      
+      // Messages subcollection - only participants can read/write
+      match /messages/{messageId} {
+        // Allow read if user is a participant in the parent chat
+        allow read: if request.auth.uid != null && 
+          request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+        
+        // Allow create if user is authenticated and is a participant
+        allow create: if request.auth.uid != null && 
+          request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+        
+        // Allow update/delete if user is the sender
+        allow update, delete: if request.auth.uid != null && 
+          request.auth.uid == resource.data.senderId;
+      }
     }
     
+    // Legacy flat messages collection (for backward compatibility during migration)
     match /messages/{messageId} {
-      allow read, write: if request.auth.uid != null;
+      allow read: if request.auth.uid != null;
+      allow write: if request.auth.uid != null;
     }
   }
 }
-

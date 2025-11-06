@@ -33,6 +33,7 @@ export default function LoginPage() {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
+        // Automatically create user profile in Firestore
         await setDoc(doc(db, "users", user.uid), {
           uid: user.uid,
           name: user.email?.split("@")[0] || "New User",
@@ -47,6 +48,7 @@ export default function LoginPage() {
           createdAt: Math.floor(Date.now() / 1000),
         });
 
+        console.log("User profile created automatically:", user.uid);
         router.push("/profile");
       } else {
         await signInWithEmailAndPassword(auth, email, password);
@@ -65,8 +67,10 @@ export default function LoginPage() {
       const userCredential = await signInWithPopup(auth, provider);
       const user = userCredential.user;
 
+      // Check if user profile exists, create if not
       const userDoc = await getDoc(doc(db, "users", user.uid));
       if (!userDoc.exists()) {
+        // Automatically create user profile
         await setDoc(doc(db, "users", user.uid), {
           uid: user.uid,
           name: user.displayName || "New User",
@@ -80,6 +84,7 @@ export default function LoginPage() {
           bio: "",
           createdAt: Math.floor(Date.now() / 1000),
         });
+        console.log("User profile created automatically:", user.uid);
         router.push("/profile");
       } else {
         router.push("/home");
