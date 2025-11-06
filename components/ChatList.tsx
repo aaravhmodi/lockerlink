@@ -13,7 +13,7 @@ interface Chat {
   id: string;
   participants: string[];
   lastMessage: string;
-  updatedAt: number;
+  updatedAt: number | { seconds?: number; nanoseconds?: number };
 }
 
 interface ChatWithUser extends Chat {
@@ -110,7 +110,11 @@ export default function ChatList() {
   return (
     <div className="space-y-3">
       {chats.map((chat, index) => {
-        const formattedDate = formatDate((chat.updatedAt?.seconds || chat.updatedAt) * 1000);
+        // Handle both number and Firestore Timestamp formats
+        const timestamp = typeof chat.updatedAt === 'number' 
+          ? chat.updatedAt 
+          : (chat.updatedAt?.seconds || 0) * 1000;
+        const formattedDate = formatDate(timestamp);
         
         return (
           <motion.div
