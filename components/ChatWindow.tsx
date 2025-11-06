@@ -12,7 +12,9 @@ type Message = {
   id: string;
   text: string;
   senderId: string;
-  timestamp: number | { seconds: number; nanoseconds: number };
+  createdAt: number | { seconds: number; nanoseconds: number };
+  // Support legacy 'timestamp' field for backward compatibility
+  timestamp?: number | { seconds: number; nanoseconds: number };
 };
 
 interface ChatWindowProps {
@@ -41,7 +43,9 @@ const toMillis = (t: number | { seconds: number; nanoseconds?: number } | undefi
 function shouldGroupMessages(prev: Message | null, current: Message): boolean {
   if (!prev) return false;
   if (prev.senderId !== current.senderId) return false;
-  const timeDiff = toMillis(current.timestamp) - toMillis(prev.timestamp);
+  const prevTime = toMillis(prev.createdAt || prev.timestamp);
+  const currentTime = toMillis(current.createdAt || current.timestamp);
+  const timeDiff = currentTime - prevTime;
   return timeDiff < 300000; // 5 minutes in milliseconds
 }
 
@@ -58,7 +62,13 @@ export default function ChatWindow({ chatId }: ChatWindowProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      console.warn("ChatWindow: User not authenticated yet");
+      return;
+    }
+
+    console.log("ChatWindow: Current UID:", user.uid);
+    console.log("ChatWindow: Listening to chat:", chatId);
 
     const fetchChatInfo = async () => {
       try {
@@ -94,38 +104,48 @@ export default function ChatWindow({ chatId }: ChatWindowProps) {
     fetchChatInfo();
 
     // Listen to messages in real-time from subcollection
+    // Path: /chats/{chatId}/messages (nested subcollection)
     const messagesRef = collection(db, "chats", chatId, "messages");
     const messagesQuery = query(
       messagesRef,
-      orderBy("timestamp", "asc")
+      orderBy("createdAt", "asc")
     );
+
+    console.log("ChatWindow: Setting up listener for messages subcollection");
 
     const unsubscribe = onSnapshot(
       messagesQuery,
       (snapshot) => {
+        console.log(`ChatWindow: Received ${snapshot.docs.length} messages`);
         const messagesData = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         })) as Message[];
         
         // Convert Firestore timestamps to numbers (safe universal parser)
-        const processedMessages = messagesData.map((msg: Message) => ({
-          ...msg,
-          timestamp:
-            typeof msg.timestamp === "object" && "seconds" in msg.timestamp
-              ? msg.timestamp.seconds * 1000
-              : typeof msg.timestamp === "number"
-                ? msg.timestamp
-                : Date.now(),
-        }));
+        // Support both 'createdAt' (preferred) and 'timestamp' (legacy)
+        const processedMessages = messagesData.map((msg: Message) => {
+          const timestamp = msg.createdAt || msg.timestamp;
+          return {
+            ...msg,
+            createdAt:
+              typeof timestamp === "object" && "seconds" in timestamp
+                ? timestamp.seconds * 1000
+                : typeof timestamp === "number"
+                  ? timestamp
+                  : Date.now(),
+          };
+        });
         
         setMessages(processedMessages);
         setLoading(false);
         setError("");
       },
       (error) => {
-        console.error("Error listening to messages:", error);
-        setError("Failed to load messages");
+        console.error("ChatWindow: Error listening to messages:", error);
+        console.error("ChatWindow: Error code:", error.code);
+        console.error("ChatWindow: Error message:", error.message);
+        setError(`Failed to load messages: ${error.message}`);
         setLoading(false);
       }
     );
@@ -154,7 +174,17 @@ export default function ChatWindow({ chatId }: ChatWindowProps) {
       }
 
       const chat = chatDoc.data();
+      console.log("ChatWindow: Chat participants:", chat.participants);
+      console.log("ChatWindow: Current user UID:", user.uid);
+      
+      if (!chat.participants || !Array.isArray(chat.participants)) {
+        setError("Invalid chat: missing participants array");
+        setSending(false);
+        return;
+      }
+      
       if (!chat.participants.includes(user.uid)) {
+        console.error("ChatWindow: User not in participants array");
         setError("You are not a participant in this chat");
         setSending(false);
         return;
@@ -165,7 +195,7 @@ export default function ChatWindow({ chatId }: ChatWindowProps) {
       await addDoc(messagesRef, {
         senderId: user.uid,
         text: messageText.trim(),
-        timestamp: serverTimestamp(),
+        createdAt: serverTimestamp(),
       });
 
       // Update chat's lastMessage and updatedAt
@@ -295,7 +325,7 @@ export default function ChatWindow({ chatId }: ChatWindowProps) {
                     {/* Timestamp */}
                     {showTime && (
                       <span className={`text-[10px] text-[#9CA3AF] mt-1 px-1 ${isSent ? "text-right" : "text-left"}`}>
-                        {formatTime(toMillis(message.timestamp))}
+                        {formatTime(toMillis(message.createdAt || message.timestamp))}
                       </span>
                     )}
                   </div>
