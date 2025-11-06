@@ -8,12 +8,12 @@ import { motion } from "framer-motion";
 import { HiPaperAirplane } from "react-icons/hi";
 import Image from "next/image";
 
-interface Message {
+type Message = {
   id: string;
-  senderId: string;
   text: string;
-  timestamp: number;
-}
+  senderId: string;
+  timestamp: number | { seconds: number; nanoseconds: number };
+};
 
 interface ChatWindowProps {
   chatId: string;
@@ -100,12 +100,15 @@ export default function ChatWindow({ chatId }: ChatWindowProps) {
           ...doc.data(),
         })) as Message[];
         
-        // Convert Firestore timestamps to numbers
-        const processedMessages = messagesData.map((msg) => ({
+        // Convert Firestore timestamps to numbers (safe universal parser)
+        const processedMessages = messagesData.map((msg: Message) => ({
           ...msg,
-          timestamp: msg.timestamp?.seconds 
-            ? msg.timestamp.seconds * 1000 
-            : (typeof msg.timestamp === 'number' ? msg.timestamp : Date.now()),
+          timestamp:
+            typeof msg.timestamp === "object" && "seconds" in msg.timestamp
+              ? msg.timestamp.seconds * 1000
+              : typeof msg.timestamp === "number"
+                ? msg.timestamp
+                : Date.now(),
         }));
         
         setMessages(processedMessages);
