@@ -8,6 +8,7 @@ import Link from "next/link";
 import { doc, getDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
 import Image from "next/image";
+import { ChevronRight } from "lucide-react";
 
 interface Chat {
   id: string;
@@ -101,14 +102,17 @@ export default function ChatList() {
 
   if (chats.length === 0) {
     return (
-      <div className="flex h-64 items-center justify-center rounded-2xl border border-[#E5E7EB] bg-white">
-        <p className="text-[#6B7280]">No conversations yet. Start chatting from Explore!</p>
+      <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white">
+        <div className="text-center">
+          <p className="text-slate-600 mb-2">No conversations yet</p>
+          <p className="text-sm text-slate-500">Start connecting with other players to begin chatting</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
+    <div>
       {chats.map((chat, index) => {
         // Handle both number and Firestore Timestamp formats
         const timestamp = typeof chat.updatedAt === 'number' 
@@ -116,37 +120,59 @@ export default function ChatList() {
           : (chat.updatedAt?.seconds || 0) * 1000;
         const formattedDate = formatDate(timestamp);
         
+        // Mock online status - in production, check presence system
+        const isOnline = Math.random() > 0.5; // Replace with actual online status
+        
         return (
           <motion.div
             key={chat.id}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.05 }}
+            className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors"
           >
-            <Link
-              href={`/messages/${chat.id}`}
-              className="flex items-center gap-4 rounded-2xl border border-[#E5E7EB] bg-white p-4 transition-all duration-200 hover:shadow-md hover:border-[#007AFF]/20"
-            >
-              <div className="h-14 w-14 overflow-hidden rounded-full bg-[#F3F4F6] border-2 border-[#E5E7EB]">
-                {chat.otherUserPhoto ? (
-                  <Image
-                    src={chat.otherUserPhoto}
-                    alt={chat.otherUserName}
-                    width={56}
-                    height={56}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-[#9CA3AF]">
-                    {chat.otherUserName[0]}
+            <Link href={`/messages/${chat.id}`}>
+              <div className="px-4 py-4 flex items-center gap-4">
+                {/* Avatar */}
+                <div className="relative flex-shrink-0">
+                  {chat.otherUserPhoto ? (
+                    <div className="w-14 h-14 rounded-full overflow-hidden bg-gradient-to-br from-[#3B82F6] to-[#2563EB]">
+                      <Image
+                        src={chat.otherUserPhoto}
+                        alt={chat.otherUserName}
+                        width={56}
+                        height={56}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-14 h-14 bg-gradient-to-br from-[#3B82F6] to-[#2563EB] rounded-full flex items-center justify-center">
+                      <span className="text-white text-lg font-semibold">
+                        {chat.otherUserName.split(' ').map(n => n[0]).join('')}
+                      </span>
+                    </div>
+                  )}
+                  {isOnline && (
+                    <div className="absolute bottom-0 right-0 w-4 h-4 bg-[#10B981] border-2 border-white rounded-full" />
+                  )}
+                </div>
+
+                {/* Message preview */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <h4 className="text-[#0F172A] truncate font-medium">{chat.otherUserName}</h4>
+                    <span className="text-xs text-slate-500 flex-shrink-0 ml-2">{formattedDate}</span>
                   </div>
-                )}
+                  <p className="text-slate-600 text-sm truncate">
+                    {chat.lastMessage || "No messages yet"}
+                  </p>
+                </div>
+
+                {/* Arrow */}
+                <div className="flex-shrink-0">
+                  <ChevronRight className="w-5 h-5 text-slate-400" />
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-[#111827] truncate">{chat.otherUserName}</div>
-                <div className="text-sm text-[#6B7280] truncate">{chat.lastMessage || "No messages yet"}</div>
-              </div>
-              <div className="text-xs text-[#9CA3AF] whitespace-nowrap">{formattedDate}</div>
             </Link>
           </motion.div>
         );

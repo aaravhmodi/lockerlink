@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useUser } from "@/hooks/useUser";
 import { uploadToCloudinary } from "@/utils/uploadToCloudinary";
@@ -9,6 +9,7 @@ import { motion } from "framer-motion";
 import { HiCamera } from "react-icons/hi";
 
 interface UserProfile {
+  username: string;
   name: string;
   team: string;
   age: number;
@@ -28,6 +29,7 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<UserProfile>({
+    username: "",
     name: "",
     team: "",
     age: 17,
@@ -39,6 +41,8 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
   });
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [usernameError, setUsernameError] = useState("");
+  const [checkingUsername, setCheckingUsername] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -49,8 +53,15 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         if (userDoc.exists()) {
           const data = userDoc.data() as UserProfile;
           setFormData({
-            ...data,
+            username: data.username || "",
+            name: data.name || "",
+            team: data.team || "",
+            age: data.age || 17,
+            city: data.city || "",
+            position: data.position || "",
             sport: data.sport || "Volleyball",
+            bio: data.bio || "",
+            photoURL: data.photoURL || "",
           });
           if (data.photoURL) {
             setPhotoPreview(null);
@@ -66,11 +77,66 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
     fetchProfile();
   }, [user]);
 
+  const checkUsernameAvailability = async (username: string): Promise<boolean> => {
+    if (!username.trim()) return false;
+    
+    try {
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("username", "==", username.toLowerCase().trim()));
+      const snapshot = await getDocs(q);
+      
+      // Check if username is taken by another user
+      if (snapshot.empty) return true;
+      
+      // If username belongs to current user, it's available
+      const existingUser = snapshot.docs.find(doc => doc.id === user?.uid);
+      return !!existingUser;
+    } catch (error) {
+      console.error("Error checking username:", error);
+      return false;
+    }
+  };
+
+  const validateUsername = async (username: string) => {
+    setUsernameError("");
+    
+    if (!username.trim()) {
+      setUsernameError("Username is required");
+      return false;
+    }
+
+    // Username format validation: 3-20 chars, alphanumeric and underscore only
+    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+    if (!usernameRegex.test(username)) {
+      setUsernameError("Username must be 3-20 characters (letters, numbers, _ only)");
+      return false;
+    }
+
+    setCheckingUsername(true);
+    const isAvailable = await checkUsernameAvailability(username);
+    setCheckingUsername(false);
+
+    if (!isAvailable) {
+      setUsernameError("Username is already taken");
+      return false;
+    }
+
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
+    // Validate username
+    const isUsernameValid = await validateUsername(formData.username);
+    if (!isUsernameValid) {
+      return;
+    }
+
     setSaving(true);
+    setUsernameError("");
+    
     try {
       let photoURL = formData.photoURL;
 
@@ -80,10 +146,12 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
       }
 
       // Save profile using setDoc with merge: true (creates or updates)
+      // Store username in lowercase for case-insensitive searches
       await setDoc(
         doc(db, "users", user.uid),
         {
           ...formData,
+          username: formData.username.toLowerCase().trim(),
           photoURL,
         },
         { merge: true }
@@ -170,6 +238,45 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         <div className="flex-1 w-full">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
+              <label className="mb-2 block text-sm font-medium text-[#111827]">Username *</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={formData.username}
+                  onChange={(e) => {
+                    const value = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+                    setFormData({ ...formData, username: value });
+                    setUsernameError("");
+                  }}
+                  onBlur={() => {
+                    if (formData.username) {
+                      validateUsername(formData.username);
+                    }
+                  }}
+                  required
+                  maxLength={20}
+                  className={`w-full rounded-xl border ${
+                    usernameError ? "border-[#FF3B30]" : "border-[#E5E7EB]"
+                  } bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation`}
+                  placeholder="username"
+                  inputMode="text"
+                  autoComplete="username"
+                />
+                {checkingUsername && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <svg className="animate-spin h-5 w-5 text-[#9CA3AF]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  </div>
+                )}
+              </div>
+              {usernameError && (
+                <p className="mt-1 text-xs text-[#FF3B30]">{usernameError}</p>
+              )}
+              <p className="mt-1 text-xs text-[#6B7280]">This is how others will find you (3-20 characters)</p>
+            </div>
+            <div>
               <label className="mb-2 block text-sm font-medium text-[#111827]">Name *</label>
               <input
                 type="text"
@@ -182,6 +289,8 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
                 autoComplete="name"
               />
             </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <div>
               <label className="mb-2 block text-sm font-medium text-[#111827]">Age *</label>
               <input

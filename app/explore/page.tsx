@@ -6,6 +6,7 @@ import { useUser } from "@/hooks/useUser";
 import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Navbar from "@/components/Navbar";
+import ProfileGuard from "@/components/ProfileGuard";
 import Link from "next/link";
 import Image from "next/image";
 import { collection as colPosts, query as qPosts, orderBy as ordPosts, limit as limPosts, onSnapshot } from "firebase/firestore";
@@ -15,6 +16,7 @@ import { HiSearch } from "react-icons/hi";
 
 interface User {
   id: string;
+  username?: string;
   name: string;
   team?: string;
   position?: string;
@@ -77,12 +79,14 @@ export default function ExplorePage() {
         ...doc.data(),
       })) as User[];
 
+      const queryLower = searchQuery.toLowerCase().trim();
       const filtered = allUsers.filter(
         (u) =>
-          u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          u.team?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          u.position?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          u.city?.toLowerCase().includes(searchQuery.toLowerCase())
+          u.username?.toLowerCase().includes(queryLower) ||
+          u.name?.toLowerCase().includes(queryLower) ||
+          u.team?.toLowerCase().includes(queryLower) ||
+          u.position?.toLowerCase().includes(queryLower) ||
+          u.city?.toLowerCase().includes(queryLower)
       );
 
       setUsers(filtered);
@@ -102,8 +106,9 @@ export default function ExplorePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] pb-20 md:pb-0">
-      <Navbar />
+    <ProfileGuard>
+      <div className="min-h-screen bg-[#F9FAFB] pb-20 md:pb-0">
+        <Navbar />
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-4 sm:py-8">
         <motion.h1
           initial={{ opacity: 0, y: -10 }}
@@ -127,7 +132,7 @@ export default function ExplorePage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-                placeholder="Search players by name, team, position, or city..."
+                placeholder="Search by username, name, team, position, or city..."
                 className="w-full rounded-xl border border-[#E5E7EB] bg-white pl-12 pr-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
               />
             </div>
@@ -180,6 +185,9 @@ export default function ExplorePage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold text-[#111827] truncate">{u.name}</div>
+                        {u.username && (
+                          <div className="text-xs text-[#9CA3AF] truncate">@{u.username}</div>
+                        )}
                         {u.team && <div className="text-sm text-[#6B7280] truncate">{u.team}</div>}
                         {u.position && <div className="text-sm text-[#6B7280]">{u.position}</div>}
                       </div>
@@ -191,49 +199,40 @@ export default function ExplorePage() {
           </motion.div>
         )}
 
-        <div>
-          <h2 className="mb-6 text-xl font-semibold text-[#111827]">Recent Posts</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {posts.map((post, index) => (
-              <motion.div
-                key={post.id}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: index * 0.05 }}
-              >
-                <Link
-                  href={`/post/${post.id}`}
-                  className="group block rounded-2xl border border-[#E5E7EB] bg-white overflow-hidden transition-all duration-200 hover:shadow-lg hover:border-[#007AFF]/20"
+        {/* Feed Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <h2 className="mb-6 text-xl font-semibold text-[#111827]">Feed</h2>
+          
+          {posts.length > 0 ? (
+            <div className="space-y-4">
+              {posts.map((post, index) => (
+                <motion.div
+                  key={post.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 + index * 0.05 }}
                 >
-                  {post.imageURL ? (
-                    <div className="relative aspect-square w-full overflow-hidden bg-[#F3F4F6]">
-                      <Image
-                        src={post.imageURL}
-                        alt="Post"
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    </div>
-                  ) : (
-                    <div className="p-6">
-                      <p className="line-clamp-3 text-[#111827]">{post.text}</p>
-                    </div>
-                  )}
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-          {posts.length === 0 && (
+                  <FeedCard post={post} />
+                </motion.div>
+              ))}
+            </div>
+          ) : (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="rounded-2xl border border-[#E5E7EB] bg-white p-12 text-center"
             >
-              <p className="text-[#6B7280]">No posts yet</p>
+              <p className="text-[#6B7280] mb-2">No posts yet</p>
+              <p className="text-sm text-[#9CA3AF]">Be the first to share something!</p>
             </motion.div>
           )}
-        </div>
+        </motion.div>
       </div>
-    </div>
+      </div>
+    </ProfileGuard>
   );
 }

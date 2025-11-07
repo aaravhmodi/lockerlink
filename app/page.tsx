@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
+import { useProfileComplete } from "@/hooks/useProfileComplete";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
@@ -12,6 +13,7 @@ import { FcGoogle } from "react-icons/fc";
 
 export default function LoginPage() {
   const { user, loading } = useUser();
+  const { isComplete, loading: profileLoading } = useProfileComplete();
   const router = useRouter();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
@@ -19,10 +21,14 @@ export default function LoginPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (!loading && user) {
-      router.push("/home");
+    if (!loading && !profileLoading && user) {
+      if (!isComplete) {
+        router.push("/profile");
+      } else {
+        router.push("/home");
+      }
     }
-  }, [user, loading, router]);
+  }, [user, loading, profileLoading, isComplete, router]);
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +58,7 @@ export default function LoginPage() {
         router.push("/profile");
       } else {
         await signInWithEmailAndPassword(auth, email, password);
-        router.push("/home");
+        // Profile check will redirect via useEffect
       }
     } catch (err: any) {
       setError(err.message || "Authentication failed");
@@ -87,7 +93,7 @@ export default function LoginPage() {
         console.log("User profile created automatically:", user.uid);
         router.push("/profile");
       } else {
-        router.push("/home");
+        // Profile check will redirect via useEffect
       }
     } catch (err: any) {
       setError(err.message || "Google authentication failed");
