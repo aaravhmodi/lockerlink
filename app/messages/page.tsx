@@ -12,12 +12,25 @@ import { motion } from "framer-motion";
 import { Search, ChevronRight, Plus, MessageCircle } from "lucide-react";
 import Link from "next/link";
 
+interface UserData {
+  id: string;
+  name?: string;
+  username?: string;
+  email?: string;
+  age?: number;
+  position?: string;
+  team?: string;
+  city?: string;
+  bio?: string;
+  photoURL?: string;
+}
+
 export default function MessagesPage() {
   const { user, loading } = useUser();
   const router = useRouter();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState("");
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<UserData[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [modalSearchQuery, setModalSearchQuery] = useState("");
   const [searching, setSearching] = useState(false);
@@ -40,7 +53,7 @@ export default function MessagesPage() {
       try {
         const usersSnapshot = await getDocs(collection(db, "users"));
         const allUsers = usersSnapshot.docs
-          .map((doc) => ({ id: doc.id, ...doc.data() }))
+          .map((doc) => ({ id: doc.id, ...doc.data() } as UserData))
           .filter((u) => u.id !== user.uid);
 
         const queryLower = modalSearchQuery.toLowerCase().trim();
