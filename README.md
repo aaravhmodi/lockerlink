@@ -65,6 +65,18 @@ In your Firebase Console, enable:
 - **Firestore Database** → Start in test mode (then update rules)
 - **Storage** → For image uploads
 
+### 1.5. Configure Authorized Domains (IMPORTANT)
+
+To prevent "missing initial state" errors, add your domains to Firebase:
+
+1. Go to **Firebase Console → Authentication → Settings → Authorized Domains**
+2. Click **Add Domain** and add:
+   - `localhost` (already added by default)
+   - `your-app.vercel.app` (your Vercel deployment URL)
+   - Your custom domain (if applicable)
+
+This ensures Google Sign-In works on all your deployment domains.
+
 ### 2. Firestore Security Rules
 
 Update your Firestore rules in Firebase Console:

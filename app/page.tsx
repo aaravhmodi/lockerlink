@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
 import { useProfileComplete } from "@/hooks/useProfileComplete";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { useState } from "react";
@@ -67,9 +67,16 @@ export default function LoginPage() {
 
   const handleGoogleAuth = async () => {
     setError("");
-    const provider = new GoogleAuthProvider();
-
+    
     try {
+      // Set persistence to localStorage to avoid session storage issues
+      await setPersistence(auth, browserLocalPersistence);
+      
+      const provider = new GoogleAuthProvider();
+      // Add additional scopes if needed
+      provider.addScope('profile');
+      provider.addScope('email');
+      
       const userCredential = await signInWithPopup(auth, provider);
       const user = userCredential.user;
 
@@ -96,7 +103,20 @@ export default function LoginPage() {
         // Profile check will redirect via useEffect
       }
     } catch (err: any) {
-      setError(err.message || "Google authentication failed");
+      console.error("Google auth error:", err);
+      
+      // Handle specific error cases
+      if (err.code === 'auth/popup-blocked') {
+        setError("Popup blocked. Please allow popups for this site and try again.");
+      } else if (err.code === 'auth/popup-closed-by-user') {
+        setError("Sign-in cancelled. Please try again.");
+      } else if (err.code === 'auth/network-request-failed') {
+        setError("Network error. Please check your connection and try again.");
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setError("This domain is not authorized. Please contact support.");
+      } else {
+        setError(err.message || "Google authentication failed. Please try again.");
+      }
     }
   };
 
