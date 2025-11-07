@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { useUser } from "@/hooks/useUser";
 import {
   doc,
@@ -51,8 +51,9 @@ interface HighlightComment {
   createdAt: number;
 }
 
-export default function HighlightViewerPage({ params }: { params: { id: string } }) {
-  const highlightId = params.id;
+export default function HighlightViewerPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const highlightId = id;
   const { user } = useUser();
   const [highlight, setHighlight] = useState<Highlight | null>(null);
   const [loading, setLoading] = useState(true);
