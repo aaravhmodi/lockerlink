@@ -227,7 +227,7 @@ export default function ProfilePage() {
       <Navbar />
       
       {/* Header with settings */}
-      <div className="bg-white border-b border-slate-200">
+      <div className="bg-white border-b border-slate-200 sticky top-14 md:static md:top-0 z-40">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <h2 className="text-[#0F172A] font-semibold text-xl">Profile</h2>
           <button

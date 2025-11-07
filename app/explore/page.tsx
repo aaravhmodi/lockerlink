@@ -109,7 +109,7 @@ export default function ExplorePage() {
     <ProfileGuard>
       <div className="min-h-screen bg-[#F9FAFB] pb-20 md:pb-0">
         <Navbar />
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 py-4 sm:py-8">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-0 pb-4 md:py-4 sm:py-8">
         <motion.h1
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}

@@ -132,7 +132,7 @@ export default function MessagesPage() {
         <Navbar />
         <div className="max-w-2xl mx-auto">
           {/* Header */}
-          <div className="bg-white border-b border-slate-200 sticky top-0 z-40">
+          <div className="bg-white border-b border-slate-200 sticky top-14 md:top-0 z-40">
             <div className="px-4 py-4">
               <h1 className="text-[#0F172A] mb-4 font-semibold text-xl">Messages</h1>
               

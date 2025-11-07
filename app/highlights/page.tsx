@@ -194,7 +194,7 @@ export default function HighlightsPage() {
         
         {/* Header */}
         <div className="bg-gradient-to-br from-[#3B82F6] to-[#2563EB] text-white">
-          <div className="max-w-2xl mx-auto px-4 py-6">
+          <div className="max-w-2xl mx-auto px-4 pt-0 pb-6 md:py-6">
             <Link href="/home" className="mb-4 inline-block p-2 hover:bg-white/10 rounded-xl transition-colors">
               <ArrowLeft className="w-6 h-6" />
             </Link>

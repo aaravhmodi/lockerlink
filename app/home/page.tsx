@@ -206,7 +206,7 @@ export default function HomePage() {
     <ProfileGuard>
       <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white pb-20 md:pb-0">
         <Navbar />
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-0 pb-4 md:py-4 sm:py-8">
           {/* Welcome Section */}
           <motion.div
             initial={{ opacity: 0, y: -10 }}

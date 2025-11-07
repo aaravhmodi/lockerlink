@@ -128,7 +128,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
   return (
     <div className="min-h-screen bg-[#F9FAFB] pb-20 md:pb-0">
       <Navbar />
-      <div className="mx-auto max-w-2xl px-4 sm:px-6 py-4 sm:py-8">
+      <div className="mx-auto max-w-2xl px-4 sm:px-6 pt-0 pb-4 md:py-4 sm:py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
