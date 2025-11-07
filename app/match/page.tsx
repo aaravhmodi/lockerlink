@@ -21,6 +21,20 @@ interface MatchPreferences {
   readyToMatch?: boolean;
 }
 
+interface UserData {
+  id: string;
+  name?: string;
+  username?: string;
+  email?: string;
+  age?: number;
+  position?: string;
+  team?: string;
+  city?: string;
+  bio?: string;
+  photoURL?: string;
+  matchPreferences?: MatchPreferences;
+}
+
 interface MatchedUser {
   id: string;
   name: string;
@@ -46,7 +60,7 @@ const POSITIONS = [
 export default function MatchPage() {
   const { user } = useUser();
   const router = useRouter();
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<UserData | null>(null);
   const [preferences, setPreferences] = useState<MatchPreferences>({
     lookingForPosition: [],
     minAge: 15,
@@ -74,7 +88,7 @@ export default function MatchPage() {
       // Load user profile
       const userDoc = await getDoc(doc(db, "users", user.uid));
       if (userDoc.exists()) {
-        const data = userDoc.data();
+        const data = { id: userDoc.id, ...userDoc.data() } as UserData;
         setUserProfile(data);
 
         // Load or initialize preferences
@@ -94,14 +108,14 @@ export default function MatchPage() {
     }
   };
 
-  const loadMatches = async (currentUserData: any) => {
+  const loadMatches = async (currentUserData: UserData) => {
     if (!user || !preferences.readyToMatch) return;
 
     try {
       // Get all users except current user
       const usersSnapshot = await getDocs(collection(db, "users"));
       const allUsers = usersSnapshot.docs
-        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .map((doc) => ({ id: doc.id, ...doc.data() } as UserData))
         .filter((u) => u.id !== user.uid && u.matchPreferences?.readyToMatch);
 
       // Filter users based on matching criteria
@@ -205,7 +219,7 @@ export default function MatchPage() {
       // Reload user profile (but don't load matches immediately)
       const userDoc = await getDoc(doc(db, "users", user.uid));
       if (userDoc.exists()) {
-        const updatedData = userDoc.data();
+        const updatedData = { id: userDoc.id, ...userDoc.data() } as UserData;
         setUserProfile(updatedData);
       }
     } catch (error) {
@@ -336,7 +350,7 @@ export default function MatchPage() {
                   onClick={async () => {
                     const userDoc = await getDoc(doc(db, "users", user!.uid));
                     if (userDoc.exists()) {
-                      const updatedData = userDoc.data();
+                      const updatedData = { id: userDoc.id, ...userDoc.data() } as UserData;
                       await loadMatches(updatedData);
                       setPreferencesSaved(false); // Switch to matches view
                     }
@@ -489,7 +503,7 @@ export default function MatchPage() {
                   onClick={async () => {
                     const userDoc = await getDoc(doc(db, "users", user!.uid));
                     if (userDoc.exists()) {
-                      const updatedData = userDoc.data();
+                      const updatedData = { id: userDoc.id, ...userDoc.data() } as UserData;
                       setUserProfile(updatedData);
                       await loadMatches(updatedData);
                     }
