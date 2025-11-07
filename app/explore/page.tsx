@@ -3,16 +3,17 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
-import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
+import { collection, query, where, getDocs, orderBy, limit, onSnapshot, updateDoc, doc, increment, arrayUnion, arrayRemove } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Navbar from "@/components/Navbar";
 import ProfileGuard from "@/components/ProfileGuard";
 import Link from "next/link";
 import Image from "next/image";
-import { collection as colPosts, query as qPosts, orderBy as ordPosts, limit as limPosts, onSnapshot } from "firebase/firestore";
+import { collection as colPosts, query as qPosts, orderBy as ordPosts, limit as limPosts } from "firebase/firestore";
 import FeedCard from "@/components/FeedCard";
 import { motion } from "framer-motion";
 import { HiSearch } from "react-icons/hi";
+import { Heart, MessageCircle, Play } from "lucide-react";
 
 interface User {
   id: string;
@@ -22,6 +23,20 @@ interface User {
   position?: string;
   photoURL?: string;
   city?: string;
+}
+
+interface Highlight {
+  id: string;
+  userId: string;
+  userName?: string;
+  userUsername?: string;
+  userPhotoURL?: string;
+  title: string;
+  thumbnailURL?: string;
+  videoURL?: string;
+  upvotes: number;
+  likedBy?: string[];
+  commentsCount?: number;
 }
 
 interface Post {
@@ -39,6 +54,8 @@ export default function ExplorePage() {
   const [users, setUsers] = useState<User[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [searching, setSearching] = useState(false);
+  const [highlights, setHighlights] = useState<Highlight[]>([]);
+  const [loadingHighlights, setLoadingHighlights] = useState(true);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -53,7 +70,7 @@ export default function ExplorePage() {
       limPosts(12)
     );
 
-    const unsubscribe = onSnapshot(postsQuery, (snapshot) => {
+    const unsubscribePosts = onSnapshot(postsQuery, (snapshot) => {
       const postsData = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
@@ -61,7 +78,34 @@ export default function ExplorePage() {
       setPosts(postsData);
     });
 
-    return () => unsubscribe();
+    const highlightsQuery = query(
+      collection(db, "highlights"),
+      orderBy("createdAt", "desc"),
+      limit(12)
+    );
+
+    const unsubscribeHighlights = onSnapshot(highlightsQuery, (snapshot) => {
+      const highlightData = snapshot.docs.map((docSnap) => {
+        const data = docSnap.data() as any;
+        return {
+          id: docSnap.id,
+          ...data,
+          upvotes: data.upvotes || 0,
+          likedBy: data.likedBy || [],
+          commentsCount: data.commentsCount || 0,
+        } as Highlight;
+      });
+      setHighlights(highlightData);
+      setLoadingHighlights(false);
+    }, (error) => {
+      console.error("Error loading highlights:", error);
+      setLoadingHighlights(false);
+    });
+
+    return () => {
+      unsubscribePosts();
+      unsubscribeHighlights();
+    };
   }, []);
 
   const handleSearch = async () => {
@@ -94,6 +138,39 @@ export default function ExplorePage() {
       console.error("Error searching:", error);
     } finally {
       setSearching(false);
+    }
+  };
+
+  const handleHighlightLike = async (highlight: Highlight) => {
+    if (!user) {
+      router.push("/");
+      return;
+    }
+
+    const highlightRef = doc(db, "highlights", highlight.id);
+    const alreadyLiked = highlight.likedBy?.includes(user.uid);
+
+    try {
+      await updateDoc(highlightRef, {
+        upvotes: increment(alreadyLiked ? -1 : 1),
+        likedBy: alreadyLiked ? arrayRemove(user.uid) : arrayUnion(user.uid),
+      });
+
+      setHighlights((prev) =>
+        prev.map((h) =>
+          h.id === highlight.id
+            ? {
+                ...h,
+                upvotes: (h.upvotes || 0) + (alreadyLiked ? -1 : 1),
+                likedBy: alreadyLiked
+                  ? (h.likedBy || []).filter((id) => id !== user.uid)
+                  : [...(h.likedBy || []), user.uid],
+              }
+            : h
+        )
+      );
+    } catch (error) {
+      console.error("Error updating highlight like:", error);
     }
   };
 
@@ -198,6 +275,108 @@ export default function ExplorePage() {
             </div>
           </motion.div>
         )}
+
+        {/* Highlights Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mb-12"
+        >
+          <h2 className="mb-6 text-xl font-semibold text-[#111827]">Latest Highlights</h2>
+          {loadingHighlights ? (
+            <div className="rounded-2xl border border-[#E5E7EB] bg-white p-12 text-center">
+              <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-[#007AFF] border-t-transparent"></div>
+              <p className="text-[#6B7280]">Loading highlights...</p>
+            </div>
+          ) : highlights.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {highlights.map((highlight, index) => {
+                const isLiked = highlight.likedBy?.includes(user?.uid || "");
+                return (
+                  <motion.div
+                    key={highlight.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="rounded-2xl border border-[#E5E7EB] bg-white shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col"
+                  >
+                    <Link href={`/highlights/${highlight.id}`} className="relative block aspect-video bg-slate-100">
+                      {highlight.thumbnailURL ? (
+                        <Image
+                          src={highlight.thumbnailURL}
+                          alt={highlight.title}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center">
+                          <Play className="w-10 h-10 text-slate-400" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                      <div className="absolute bottom-3 left-3 right-3 flex items-center gap-2 text-white">
+                        <div className="flex-1 truncate font-semibold">{highlight.title}</div>
+                      </div>
+                    </Link>
+                    <div className="flex flex-1 flex-col p-4">
+                      <div className="flex items-center gap-3 mb-3">
+                        <Link href={`/profile/${highlight.userId}`} className="flex items-center gap-3">
+                          <div className="h-10 w-10 overflow-hidden rounded-full bg-[#F3F4F6]">
+                            {highlight.userPhotoURL ? (
+                              <Image
+                                src={highlight.userPhotoURL}
+                                alt={highlight.userName || "Player"}
+                                width={40}
+                                height={40}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-[#9CA3AF]">
+                                {(highlight.userName || "P").charAt(0)}
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold text-[#111827]">{highlight.userName || "Player"}</p>
+                            {highlight.userUsername && (
+                              <p className="truncate text-xs text-[#9CA3AF]">@{highlight.userUsername}</p>
+                            )}
+                          </div>
+                        </Link>
+                      </div>
+                      <div className="mt-auto flex items-center justify-between">
+                        <button
+                          onClick={() => handleHighlightLike(highlight)}
+                          className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
+                            isLiked
+                              ? "bg-gradient-to-r from-[#3B82F6] to-[#2563EB] text-white"
+                              : "bg-slate-100 text-[#111827] hover:bg-slate-200"
+                          }`}
+                        >
+                          <Heart className={`w-4 h-4 ${isLiked ? "fill-white" : "text-[#3B82F6]"}`} />
+                          {highlight.upvotes}
+                        </button>
+                        <Link
+                          href={`/highlights/${highlight.id}`}
+                          className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-[#6B7280] hover:text-[#007AFF]"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                          {highlight.commentsCount || 0}
+                        </Link>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-[#E5E7EB] bg-white p-12 text-center">
+              <p className="mb-2 text-[#6B7280]">No highlights yet</p>
+              <p className="text-sm text-[#9CA3AF]">Upload your first highlight to inspire others!</p>
+            </div>
+          )}
+        </motion.div>
 
         {/* Feed Section */}
         <motion.div

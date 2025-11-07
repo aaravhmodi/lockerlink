@@ -22,13 +22,12 @@ export default function ProfileGuard({ children }: ProfileGuardProps) {
       }
       
       if (!isComplete) {
-        router.push("/profile");
         return;
       }
     }
   }, [user, userLoading, isComplete, profileLoading, router]);
 
-  if (userLoading || profileLoading || !user || !isComplete) {
+  if (userLoading || profileLoading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#F9FAFB]">
         <div className="text-center">
@@ -39,6 +38,28 @@ export default function ProfileGuard({ children }: ProfileGuardProps) {
             </svg>
           </div>
           <p className="text-[#6B7280]">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isComplete) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F9FAFB] px-4">
+        <div className="max-w-sm rounded-2xl bg-white p-6 shadow-lg border border-[#E5E7EB] text-center">
+          <svg className="mx-auto mb-4 h-10 w-10 text-[#007AFF]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852L11.75 15m.75 4.5h-.008v.008H12v-.008zm9-7.5a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <h2 className="text-xl font-semibold text-[#111827] mb-2">Complete Your Profile</h2>
+          <p className="text-[#6B7280] mb-4">
+            Finish setting up your profile to unlock Explore, Match, Messages, and Highlights.
+          </p>
+          <button
+            onClick={() => router.push("/profile")}
+            className="w-full rounded-xl bg-[#007AFF] px-4 py-3 text-white font-medium transition-all duration-200 hover:bg-[#0056CC]"
+          >
+            Go to Profile Setup
+          </button>
         </div>
       </div>
     );

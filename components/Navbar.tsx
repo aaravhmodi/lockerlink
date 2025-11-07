@@ -3,18 +3,56 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
+import { useProfileComplete } from "@/hooks/useProfileComplete";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
-import { HiHome, HiSearch, HiChat, HiUser, HiLogout } from "react-icons/hi";
+import { HiHome, HiSearch, HiChat, HiUser, HiLogout, HiInformationCircle } from "react-icons/hi";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 
 export default function Navbar() {
   const { user, loading } = useUser();
+  const { isComplete, loading: profileLoading } = useProfileComplete();
   const router = useRouter();
   const pathname = usePathname();
   const [showMenu, setShowMenu] = useState(false);
+  const [showProfileReminder, setShowProfileReminder] = useState(false);
+  const reminderTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const triggerProfileReminder = () => {
+    if (reminderTimeoutRef.current) {
+      clearTimeout(reminderTimeoutRef.current);
+    }
+
+    setShowProfileReminder(true);
+    reminderTimeoutRef.current = setTimeout(() => {
+      setShowProfileReminder(false);
+    }, 4000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (reminderTimeoutRef.current) {
+        clearTimeout(reminderTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isComplete) {
+      setShowProfileReminder(false);
+    }
+  }, [isComplete]);
+
+  const handleProtectedNavigation = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (!profileLoading && !isComplete && href !== "/profile") {
+      event.preventDefault();
+      triggerProfileReminder();
+      setShowMenu(false);
+      router.push("/profile");
+    }
+  };
 
   const handleSignOut = async () => {
     try {
@@ -56,6 +94,7 @@ export default function Navbar() {
           <div className="flex h-16 items-center justify-between">
             <Link 
               href="/home" 
+              onClick={(event) => handleProtectedNavigation(event, "/home")}
               className="text-xl font-semibold text-[#111827] hover:opacity-80 transition-opacity"
             >
               LockerLink
@@ -70,6 +109,7 @@ export default function Navbar() {
                   <Link
                     key={item.href}
                     href={item.href}
+                    onClick={(event) => handleProtectedNavigation(event, item.href)}
                     className="relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:bg-[#F3F4F6]"
                   >
                     <Icon className="w-5 h-5" />
@@ -109,6 +149,7 @@ export default function Navbar() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={(event) => handleProtectedNavigation(event, item.href)}
                 className="relative flex flex-col items-center justify-center flex-1 h-full min-w-0 px-2 touch-manipulation"
               >
                 <Icon className={`w-6 h-6 mb-1 ${isActive ? 'text-[#007AFF]' : 'text-[#6B7280]'}`} />
@@ -134,6 +175,7 @@ export default function Navbar() {
         <div className="flex h-14 items-center justify-between px-4">
           <Link 
             href="/home" 
+            onClick={(event) => handleProtectedNavigation(event, "/home")}
             className="text-lg font-semibold text-[#111827]"
           >
             LockerLink
@@ -165,6 +207,33 @@ export default function Navbar() {
           </motion.div>
         )}
       </div>
+
+      {/* Profile completion reminder */}
+      {!profileLoading && !isComplete && showProfileReminder && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          className="fixed left-1/2 z-[60] -translate-x-1/2 top-16 md:top-20 px-4"
+        >
+          <div className="flex items-center gap-3 rounded-2xl bg-[#0F172A] text-white px-4 py-3 shadow-2xl border border-[#1E293B]/40">
+            <HiInformationCircle className="h-5 w-5 text-[#60A5FA]" />
+            <div className="text-sm font-medium">
+              Complete your profile to unlock the rest of LockerLink.
+            </div>
+            <button
+              onClick={() => {
+                setShowProfileReminder(false);
+                setShowMenu(false);
+                router.push("/profile");
+              }}
+              className="ml-2 rounded-xl bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide hover:bg-white/25 transition-colors"
+            >
+              Complete now
+            </button>
+          </div>
+        </motion.div>
+      )}
 
       {/* Spacer for mobile bottom nav */}
       <div className="md:hidden h-16" />

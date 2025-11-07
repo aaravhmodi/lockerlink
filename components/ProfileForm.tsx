@@ -151,6 +151,7 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         doc(db, "users", user.uid),
         {
           ...formData,
+          sport: "Volleyball",
           username: formData.username.toLowerCase().trim(),
           photoURL,
         },
@@ -337,18 +338,11 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="mb-2 block text-sm font-medium text-[#111827]">Sport *</label>
-          <select
-            value={formData.sport}
-            onChange={(e) => setFormData({ ...formData, sport: e.target.value })}
-            required
-            className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
-          >
-            <option value="Volleyball">Volleyball</option>
-            <option value="Basketball">Basketball</option>
-            <option value="Soccer">Soccer</option>
-            <option value="Tennis">Tennis</option>
-            <option value="Other">Other</option>
-          </select>
+          <div className="w-full rounded-xl border border-[#E5E7EB] bg-slate-50 px-4 py-3 text-base text-[#111827] font-medium">
+            Volleyball
+          </div>
+          <p className="mt-1 text-xs text-[#6B7280]">LockerLink currently supports volleyball athletes.</p>
+          <input type="hidden" name="sport" value="Volleyball" />
         </div>
 
         <div>

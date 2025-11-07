@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
-import { collection, query, orderBy, limit, getDocs, addDoc, serverTimestamp, doc, updateDoc, increment } from "firebase/firestore";
+import { collection, query, orderBy, limit, addDoc, serverTimestamp, doc, updateDoc, increment, onSnapshot, arrayUnion, arrayRemove, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Navbar from "@/components/Navbar";
 import ProfileGuard from "@/components/ProfileGuard";
@@ -11,20 +10,25 @@ import { motion } from "framer-motion";
 import { Trophy, Clock, Upload, Flame, Star, ArrowLeft, Play, Heart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { uploadToCloudinary } from "@/utils/uploadToCloudinary";
+import { uploadImageToCloudinary, uploadVideoToCloudinary } from "@/utils/uploadToCloudinary";
 
 interface Highlight {
   id: string;
   userId: string;
   userName?: string;
+  userUsername?: string;
   userPhotoURL?: string;
+  userPosition?: string;
   videoURL?: string;
+  videoPublicId?: string;
   thumbnailURL?: string;
   title: string;
   description?: string;
   upvotes: number;
   createdAt: number;
   rank?: number;
+  likedBy?: string[];
+  commentsCount?: number;
 }
 
 interface Challenge {
@@ -38,7 +42,6 @@ interface Challenge {
 
 export default function HighlightsPage() {
   const { user } = useUser();
-  const router = useRouter();
   const [currentChallenge, setCurrentChallenge] = useState<Challenge | null>(null);
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,7 +51,6 @@ export default function HighlightsPage() {
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadDescription, setUploadDescription] = useState("");
-  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -60,7 +62,7 @@ export default function HighlightsPage() {
     
     setLoading(true);
     try {
-      // Mock challenge data - replace with Firestore query
+      // Challenge data (static for now)
       setCurrentChallenge({
         id: "challenge-1",
         title: "Best Block Challenge 🔥",
@@ -70,58 +72,100 @@ export default function HighlightsPage() {
         entries: 1200,
       });
 
-      // Mock highlights - replace with Firestore query
-      const mockHighlights: Highlight[] = [
-        {
-          id: "1",
-          userId: "1",
-          userName: "Marcus Chen",
-          title: "The Perfect Block",
-          upvotes: 1247,
-          rank: 1,
-          createdAt: Date.now(),
-        },
-        {
-          id: "2",
-          userId: "2",
-          userName: "Jake Sullivan",
-          title: "Game Winning Spike",
-          upvotes: 982,
-          rank: 2,
-          createdAt: Date.now(),
-        },
-        {
-          id: "3",
-          userId: "3",
-          userName: "Tyler Brooks",
-          title: "Impossible Save",
-          upvotes: 856,
-          rank: 3,
-          createdAt: Date.now(),
-        },
-      ];
-      setHighlights(mockHighlights);
+      const highlightsQuery = query(
+        collection(db, "highlights"),
+        orderBy("createdAt", "desc"),
+        limit(25)
+      );
+
+      const unsubscribe = onSnapshot(highlightsQuery, (snapshot) => {
+        const highlightData = snapshot.docs.map((docSnap) => {
+          const data = docSnap.data() as any;
+          return {
+            id: docSnap.id,
+            ...data,
+            createdAt: data.createdAt?.toMillis?.() || data.createdAt || Date.now(),
+            upvotes: data.upvotes || 0,
+            likedBy: data.likedBy || [],
+            commentsCount: data.commentsCount || 0,
+          } as Highlight;
+        });
+
+        const ranked = [...highlightData]
+          .sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0))
+          .map((highlight, index) => ({
+            ...highlight,
+            rank: index < 3 ? index + 1 : undefined,
+          }));
+
+        setHighlights(ranked);
+        setLoading(false);
+      }, (error) => {
+        console.error("Error listening for highlights:", error);
+        setLoading(false);
+      });
+
+      return unsubscribe;
     } catch (error) {
       console.error("Error loading highlights:", error);
-    } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!user) return;
+    let unsubscribe: (() => void) | undefined;
+
+    loadData().then((fn) => {
+      if (typeof fn === "function") {
+        unsubscribe = fn;
+      }
+    });
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [user]);
 
   const handleUpload = async () => {
     if (!user || !videoFile || !uploadTitle.trim() || uploading) return;
 
     setUploading(true);
     try {
-      const thumbnailURL = thumbnailFile ? await uploadToCloudinary(thumbnailFile) : "";
+      const [videoUpload, userDocSnap] = await Promise.all([
+        uploadVideoToCloudinary(videoFile),
+        getDoc(doc(db, "users", user.uid)),
+      ]);
+
+      const userProfile = userDocSnap.exists() ? userDocSnap.data() : null;
+
+      let thumbnailURL = "";
+      if (thumbnailFile) {
+        const thumbnailUpload = await uploadImageToCloudinary(thumbnailFile);
+        thumbnailURL = thumbnailUpload.secureUrl;
+      } else {
+        const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+        if (cloudName) {
+          thumbnailURL = `https://res.cloudinary.com/${cloudName}/video/upload/so_0/c_fill,w_640,h_360/${videoUpload.publicId}.jpg`;
+        }
+      }
 
       await addDoc(collection(db, "highlights"), {
         userId: user.uid,
-        videoURL: "", // Replace with video upload logic
+        userName: userProfile?.name || user.displayName || "Player",
+        userUsername: userProfile?.username || "",
+        userPhotoURL: userProfile?.photoURL || user.photoURL || "",
+        userPosition: userProfile?.position || "",
+        videoURL: videoUpload.secureUrl,
+        videoPublicId: videoUpload.publicId,
         thumbnailURL,
         title: uploadTitle.trim(),
         description: uploadDescription.trim(),
         upvotes: 0,
+        likedBy: [],
+        commentsCount: 0,
         createdAt: serverTimestamp(),
         challengeId: currentChallenge?.id || "",
       });
@@ -131,8 +175,6 @@ export default function HighlightsPage() {
       setUploadTitle("");
       setUploadDescription("");
       setShowUploadModal(false);
-      
-      loadData();
       alert("Highlight uploaded successfully!");
     } catch (error) {
       console.error("Error uploading highlight:", error);
@@ -145,18 +187,33 @@ export default function HighlightsPage() {
   const handleUpvote = async (highlightId: string) => {
     if (!user) return;
 
+    const highlight = highlights.find((h) => h.id === highlightId);
+    if (!highlight) return;
+
+    const hasLiked = highlight.likedBy?.includes(user.uid);
+
     try {
       const highlightRef = doc(db, "highlights", highlightId);
       await updateDoc(highlightRef, {
-        upvotes: increment(1),
+        upvotes: increment(hasLiked ? -1 : 1),
+        likedBy: hasLiked ? arrayRemove(user.uid) : arrayUnion(user.uid),
       });
-      
-      setHighlights(highlights.map(h => 
-        h.id === highlightId ? { ...h, upvotes: h.upvotes + 1 } : h
-      ));
-      setSelectedVideo(highlightId);
+
+      setHighlights((prev) =>
+        prev.map((h) =>
+          h.id === highlightId
+            ? {
+                ...h,
+                upvotes: (h.upvotes || 0) + (hasLiked ? -1 : 1),
+                likedBy: hasLiked
+                  ? (h.likedBy || []).filter((id) => id !== user.uid)
+                  : [...(h.likedBy || []), user.uid],
+              }
+            : h
+        )
+      );
     } catch (error) {
-      console.error("Error upvoting:", error);
+      console.error("Error updating like:", error);
     }
   };
 
@@ -306,7 +363,10 @@ export default function HighlightsPage() {
                       <p className="text-slate-500 text-sm mb-2">by {highlight.userName || "Anonymous"}</p>
                       <div className="flex items-center gap-2">
                         <div className="bg-blue-50 text-[#3B82F6] px-2 py-1 rounded-md text-xs font-medium">
-                          {highlight.upvotes.toLocaleString()} votes
+                          {highlight.upvotes.toLocaleString()} {highlight.upvotes === 1 ? "like" : "likes"}
+                        </div>
+                        <div className="bg-slate-100 text-[#6B7280] px-2 py-1 rounded-md text-xs font-medium">
+                          {highlight.commentsCount || 0} {highlight.commentsCount === 1 ? "comment" : "comments"}
                         </div>
                       </div>
                     </div>
@@ -319,12 +379,12 @@ export default function HighlightsPage() {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       className={`w-full rounded-xl px-4 py-2 font-medium transition-all ${
-                        selectedVideo === highlight.id
+                        highlight.likedBy?.includes(user?.uid || "")
                           ? 'bg-gradient-to-r from-[#3B82F6] to-[#2563EB] text-white'
                           : 'bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700'
                       }`}
                     >
-                      {selectedVideo === highlight.id ? 'Voted! 🔥' : 'Vote for this highlight'}
+                      {highlight.likedBy?.includes(user?.uid || "") ? 'Liked! 🔥' : 'Like this highlight'}
                     </motion.button>
                   </div>
                 </motion.div>

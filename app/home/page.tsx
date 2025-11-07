@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
-import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Navbar from "@/components/Navbar";
 import ProfileGuard from "@/components/ProfileGuard";
@@ -104,11 +104,25 @@ export default function HomePage() {
         entries: 1200,
       });
 
-      setTopHighlights([
-        { id: "1", userName: "Marcus Chen", title: "The Perfect Block", upvotes: 1247, rank: 1 },
-        { id: "2", userName: "Jake Sullivan", title: "Game Winning Spike", upvotes: 982, rank: 2 },
-        { id: "3", userName: "Tyler Brooks", title: "Impossible Save", upvotes: 856, rank: 3 },
-      ]);
+      // Load top highlights from Firestore
+      const highlightsQuery = query(
+        collection(db, "highlights"),
+        orderBy("upvotes", "desc"),
+        limit(3)
+      );
+      const highlightsSnapshot = await getDocs(highlightsQuery);
+      const highlightsData = highlightsSnapshot.docs.map((docSnap, index) => {
+        const data = docSnap.data() as any;
+        return {
+          id: docSnap.id,
+          userName: data.userName || "Player",
+          title: data.title || "Highlight",
+          upvotes: data.upvotes || 0,
+          rank: index + 1,
+          thumbnailURL: data.thumbnailURL || "",
+        } as Highlight;
+      });
+      setTopHighlights(highlightsData);
 
       // Load current match (mock for now)
       setCurrentMatch(null);

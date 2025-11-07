@@ -12,7 +12,7 @@ import { motion } from "framer-motion";
 import { Settings, MapPin, Award, Play, Upload } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { uploadToCloudinary } from "@/utils/uploadToCloudinary";
+import { uploadImageToCloudinary, uploadVideoToCloudinary } from "@/utils/uploadToCloudinary";
 
 interface UserProfile {
   name: string;
@@ -137,15 +137,33 @@ export default function ProfilePage() {
 
     setUploading(true);
     try {
-      const thumbnailURL = thumbnailFile ? await uploadToCloudinary(thumbnailFile) : "";
+      const videoUpload = await uploadVideoToCloudinary(videoFile);
+
+      let thumbnailURL = "";
+      if (thumbnailFile) {
+        const thumbnailUpload = await uploadImageToCloudinary(thumbnailFile);
+        thumbnailURL = thumbnailUpload.secureUrl;
+      } else {
+        const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+        if (cloudName && videoUpload.publicId) {
+          thumbnailURL = `https://res.cloudinary.com/${cloudName}/video/upload/so_0/c_fill,w_640,h_360/${videoUpload.publicId}.jpg`;
+        }
+      }
 
       await addDoc(collection(db, "highlights"), {
         userId: user.uid,
-        videoURL: "", // Replace with video upload logic
+        userName: userProfile?.name || user.displayName || "Player",
+        userUsername: userProfile?.username || "",
+        userPhotoURL: userProfile?.photoURL || user.photoURL || "",
+        userPosition: userProfile?.position || "",
+        videoURL: videoUpload.secureUrl,
+        videoPublicId: videoUpload.publicId,
         thumbnailURL,
         title: uploadTitle.trim(),
         description: uploadDescription.trim(),
         upvotes: 0,
+        likedBy: [],
+        commentsCount: 0,
         createdAt: serverTimestamp(),
         challengeId: "",
       });
