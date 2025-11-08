@@ -17,6 +17,9 @@ interface UserProfile {
   position: string;
   sport: string;
   bio: string;
+  height: string;
+  vertical: string;
+  weight: string;
   photoURL?: string;
 }
 
@@ -37,6 +40,9 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
     position: "",
     sport: "Volleyball",
     bio: "",
+    height: "",
+    vertical: "",
+    weight: "",
     photoURL: "",
   });
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -61,6 +67,9 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
             position: data.position || "",
             sport: data.sport || "Volleyball",
             bio: data.bio || "",
+            height: data.height || "",
+            vertical: data.vertical || "",
+            weight: data.weight || "",
             photoURL: data.photoURL || "",
           });
           if (data.photoURL) {
@@ -303,6 +312,17 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
                 inputMode="numeric"
               />
             </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-[#111827]">Height *</label>
+              <input
+                type="text"
+                value={formData.height}
+                onChange={(e) => setFormData({ ...formData, height: e.target.value })}
+                required
+                placeholder={`e.g., 6'2"`}
+                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -358,6 +378,31 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
             <option value="Middle Blocker">Middle Blocker</option>
             <option value="Libero">Libero</option>
           </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="mb-2 block text-sm font-medium text-[#111827]">Vertical *</label>
+          <input
+            type="text"
+            value={formData.vertical}
+            onChange={(e) => setFormData({ ...formData, vertical: e.target.value })}
+            required
+            placeholder='e.g., 30"'
+            className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+          />
+        </div>
+        <div>
+          <label className="mb-2 block text-sm font-medium text-[#111827]">Weight *</label>
+          <input
+            type="text"
+            value={formData.weight}
+            onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+            required
+            placeholder="e.g., 165 lbs"
+            className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+          />
         </div>
       </div>
 

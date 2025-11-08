@@ -9,7 +9,7 @@ import { db } from "@/lib/firebase";
 import Navbar from "@/components/Navbar";
 import ProfileForm from "@/components/ProfileForm";
 import { motion } from "framer-motion";
-import { Settings, MapPin, Award, Play, Upload, CheckCircle2 } from "lucide-react";
+import { Settings, MapPin, Award, Play, Upload, CheckCircle2, TrendingUp, Sparkles, Trophy } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { uploadImageToCloudinary, uploadVideoToCloudinary } from "@/utils/uploadToCloudinary";
@@ -21,6 +21,9 @@ interface UserProfile {
   position?: string;
   age?: number;
   city?: string;
+  height?: string;
+  vertical?: string;
+  weight?: string;
   photoURL?: string;
   bio?: string;
 }
@@ -99,6 +102,9 @@ export default function ProfilePage() {
           position: data.position,
           age: data.age,
           city: data.city,
+          height: data.height,
+          vertical: data.vertical,
+          weight: data.weight,
           photoURL: data.photoURL,
           bio: data.bio,
         });
@@ -206,7 +212,26 @@ export default function ProfilePage() {
   };
 
   const stats = [
-    { label: "Highlights", value: highlights.length.toString(), icon: Play },
+    {
+      label: "Height",
+      value: userProfile?.height || "—",
+      icon: TrendingUp,
+    },
+    {
+      label: "Vertical",
+      value: userProfile?.vertical || "—",
+      icon: Sparkles,
+    },
+    {
+      label: "Weight",
+      value: userProfile?.weight || "—",
+      icon: Trophy,
+    },
+    {
+      label: "Highlights",
+      value: highlights.length.toString(),
+      icon: Play,
+    },
   ];
 
   if (loading || profileLoading || profileStatusLoading) {

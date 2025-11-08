@@ -40,7 +40,10 @@ export function useProfileComplete() {
           data.age &&
           data.city &&
           data.position &&
-          data.sport;
+          data.sport &&
+          data.height &&
+          data.vertical &&
+          data.weight;
 
         setIsComplete(!!hasRequiredFields);
         setLoading(false);
