@@ -1,14 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
+  doc,
+  getDoc,
+  getDocs,
+  writeBatch,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useUser } from "@/hooks/useUser";
 import Link from "next/link";
-import { doc, getDoc } from "firebase/firestore";
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Trash2, Loader2, AlertTriangle } from "lucide-react";
 
 interface Chat {
   id: string;
@@ -47,6 +56,8 @@ export default function ChatList() {
   const { user } = useUser();
   const [chats, setChats] = useState<ChatWithUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -90,6 +101,32 @@ export default function ChatList() {
     return () => unsubscribe();
   }, [user]);
 
+  const handleDeleteChat = async (chatId: string) => {
+    if (!user || deletingId) return;
+    const confirmDelete = window.confirm("Delete this conversation? This cannot be undone.");
+    if (!confirmDelete) return;
+
+    setDeletingId(chatId);
+    setError(null);
+    try {
+      const chatDocRef = doc(db, "chats", chatId);
+      const messagesSnap = await getDocs(collection(db, "chats", chatId, "messages"));
+      const batch = writeBatch(db);
+
+      messagesSnap.forEach((messageDoc) => {
+        batch.delete(messageDoc.ref);
+      });
+      batch.delete(chatDocRef);
+
+      await batch.commit();
+    } catch (deleteError: any) {
+      console.error("Error deleting chat:", deleteError);
+      setError(deleteError.message || "Failed to delete chat. Please try again.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-3">
@@ -113,6 +150,13 @@ export default function ChatList() {
 
   return (
     <div>
+      {error && (
+        <div className="mb-3 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+          <AlertTriangle className="h-4 w-4" />
+          <span>{error}</span>
+        </div>
+      )}
+
       {chats.map((chat, index) => {
         // Handle both number and Firestore Timestamp formats
         const timestamp = typeof chat.updatedAt === 'number' 
@@ -129,10 +173,10 @@ export default function ChatList() {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.05 }}
-            className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors"
+            className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
           >
-            <Link href={`/messages/${chat.id}`}>
-              <div className="px-4 py-4 flex items-center gap-4">
+            <div className="px-4 py-4 flex items-center gap-4">
+              <Link href={`/messages/${chat.id}`} className="flex flex-1 items-center gap-4">
                 {/* Avatar */}
                 <div className="relative flex-shrink-0">
                   {chat.otherUserPhoto ? (
@@ -172,8 +216,23 @@ export default function ChatList() {
                 <div className="flex-shrink-0">
                   <ChevronRight className="w-5 h-5 text-slate-400" />
                 </div>
-              </div>
-            </Link>
+              </Link>
+
+              <button
+                onClick={() => handleDeleteChat(chat.id)}
+                disabled={deletingId === chat.id}
+                className="ml-3 inline-flex items-center gap-1 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
+              >
+                {deletingId === chat.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </>
+                )}
+              </button>
+            </div>
           </motion.div>
         );
       })}
