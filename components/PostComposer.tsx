@@ -11,6 +11,7 @@ import { FileVideo, Image as ImageIcon, Loader2, X, AlertCircle } from "lucide-r
 
 interface PostComposerProps {
   onPostCreated?: () => void;
+  onOpenManage?: () => void;
 }
 
 type MediaType = "image" | "video" | null;
@@ -23,7 +24,7 @@ interface UserProfilePreview {
 
 const MAX_TEXT_LENGTH = 500;
 
-export default function PostComposer({ onPostCreated }: PostComposerProps) {
+export default function PostComposer({ onPostCreated, onOpenManage }: PostComposerProps) {
   const { user } = useUser();
   const [profile, setProfile] = useState<UserProfilePreview | null>(null);
   const [text, setText] = useState("");
@@ -210,6 +211,18 @@ export default function PostComposer({ onPostCreated }: PostComposerProps) {
               {textCharsRemaining} chars left
             </span>
           </div>
+
+          {onOpenManage && (
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={onOpenManage}
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-[#3B82F6] transition-colors hover:border-[#3B82F6] hover:bg-[#3B82F6]/10"
+              >
+                Manage previous posts
+              </button>
+            </div>
+          )}
 
           {mediaFile && (
             <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50/60 p-4">

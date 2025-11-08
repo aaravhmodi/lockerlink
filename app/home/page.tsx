@@ -13,6 +13,7 @@ import Image from "next/image";
 import Link from "next/link";
 import FeedCard from "@/components/FeedCard";
 import PostComposer from "@/components/PostComposer";
+import ManagePostsModal from "@/components/ManagePostsModal";
 
 interface UserProfile {
   name: string;
@@ -85,6 +86,7 @@ export default function HomePage() {
   const [searching, setSearching] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
+  const [showManagePosts, setShowManagePosts] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -301,6 +303,22 @@ export default function HomePage() {
       <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white pb-20 md:pb-0">
         <Navbar />
         <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-0 pb-4 md:py-4 sm:py-8">
+          {/* About section */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mb-6"
+          >
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+              <h2 className="text-lg font-semibold text-[#0F172A] mb-2">About LockerLink</h2>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                LockerLink connects volleyball athletes, coaches, and recruiters. Share your grind, discover new talent,
+                and showcase highlights—all in one place built for the next generation of players.
+              </p>
+            </div>
+          </motion.div>
+
           {/* Welcome Section */}
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -445,22 +463,6 @@ export default function HomePage() {
             </Link>
           </div>
 
-          {/* About section */}
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="mb-6"
-          >
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-              <h2 className="text-lg font-semibold text-[#0F172A] mb-2">About LockerLink</h2>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                LockerLink connects volleyball athletes, coaches, and recruiters. Share your progress, find teammates,
-                and showcase highlights—all built for the next generation of talent.
-              </p>
-            </div>
-          </motion.div>
-
           {/* Post Composer */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -468,7 +470,7 @@ export default function HomePage() {
             transition={{ delay: 0.25 }}
             className="mb-6"
           >
-            <PostComposer />
+            <PostComposer onOpenManage={() => setShowManagePosts(true)} />
           </motion.div>
 
           {/* Latest Highlights Section */}
@@ -583,6 +585,8 @@ export default function HomePage() {
           </motion.div>
         </div>
       </div>
+
+      <ManagePostsModal open={showManagePosts} onClose={() => setShowManagePosts(false)} />
     </ProfileGuard>
   );
 }
