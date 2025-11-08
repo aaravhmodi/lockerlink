@@ -394,11 +394,11 @@ export default function ProfilePage() {
 
           {/* Stats */}
           {stats.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4 md:pr-64">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
               {stats.map((stat) => {
                 const Icon = stat.icon;
                 return (
-                  <div key={stat.label} className="bg-slate-50 rounded-xl p-3 text-center">
+                  <div key={stat.label} className="bg-slate-50 rounded-2xl p-4 text-center shadow-sm">
                     <Icon className="w-5 h-5 text-[#3B82F6] mx-auto mb-2" />
                     <p className="text-xs text-slate-500 mb-1">{stat.label}</p>
                     <p className="text-[#0F172A] font-medium">{stat.value}</p>
