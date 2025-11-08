@@ -33,11 +33,13 @@ export default function PostComposer({ onPostCreated, onOpenManage }: PostCompos
   const [mediaType, setMediaType] = useState<MediaType>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
     const fetchProfilePreview = async () => {
       if (!user) {
         setProfile(null);
+        setInitializing(false);
         return;
       }
 
@@ -58,6 +60,8 @@ export default function PostComposer({ onPostCreated, onOpenManage }: PostCompos
         }
       } catch (profileError) {
         console.error("Error loading profile preview:", profileError);
+      } finally {
+        setInitializing(false);
       }
     };
 
@@ -102,6 +106,11 @@ export default function PostComposer({ onPostCreated, onOpenManage }: PostCompos
     event.preventDefault();
     if (!user || submitting) return;
 
+    if (initializing) {
+      setError("Still loading your profile—try posting again in a moment.");
+      return;
+    }
+
     if (!text.trim() && !mediaFile) {
       setError("Share a quick update or add a highlight video before posting.");
       return;
@@ -141,6 +150,7 @@ export default function PostComposer({ onPostCreated, onOpenManage }: PostCompos
         videoURL,
         thumbnailURL,
         createdAt: serverTimestamp(),
+        commentsCount: 0,
       });
 
       resetForm();

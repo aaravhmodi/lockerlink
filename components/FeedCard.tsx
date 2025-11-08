@@ -3,10 +3,21 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { doc, getDoc } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { motion } from "framer-motion";
-import { AlertTriangle, Play } from "lucide-react";
+import { AlertTriangle, MessageCircle, Play, Trash2 } from "lucide-react";
+import { useUser } from "@/hooks/useUser";
 
 interface Post {
   id: string;
@@ -51,10 +62,23 @@ function formatDate(timestamp: number): string {
 }
 
 export default function FeedCard({ post }: FeedCardProps) {
+  const { user: currentUser } = useUser();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [dateString, setDateString] = useState("");
   const [videoError, setVideoError] = useState(false);
+  const [commentText, setCommentText] = useState("");
+  const [addingComment, setAddingComment] = useState(false);
+  const [comments, setComments] = useState<
+    Array<{
+      id: string;
+      userName?: string;
+      userPhotoURL?: string;
+      text: string;
+      createdAt: number;
+    }>
+  >([]);
+  const [showComments, setShowComments] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -83,6 +107,67 @@ export default function FeedCard({ post }: FeedCardProps) {
     () => !!post.videoURL && !videoError,
     [post.videoURL, videoError]
   );
+
+  useEffect(() => {
+    if (!showComments) return;
+
+    const commentsQuery = query(
+      collection(db, "posts", post.id, "comments"),
+      orderBy("createdAt", "asc")
+    );
+
+    const unsubscribe = onSnapshot(commentsQuery, (snapshot) => {
+      const data = snapshot.docs.map((docSnap) => {
+        const commentData = docSnap.data() as any;
+        return {
+          id: docSnap.id,
+          userName: commentData.userName,
+          userPhotoURL: commentData.userPhotoURL,
+          text: commentData.text,
+          createdAt:
+            commentData.createdAt?.toMillis?.() ||
+            (typeof commentData.createdAt === "number" ? commentData.createdAt : Date.now()),
+        };
+      });
+      setComments(data);
+    });
+
+    return () => unsubscribe();
+  }, [post.id, showComments]);
+
+  const handleAddComment = async () => {
+    if (!currentUser || !commentText.trim()) return;
+    setAddingComment(true);
+    try {
+      const profileDoc = await getDoc(doc(db, "users", currentUser.uid));
+      const profile = profileDoc.exists() ? profileDoc.data() : null;
+
+      await addDoc(collection(db, "posts", post.id, "comments"), {
+        userId: currentUser.uid,
+        userName: profile?.name || currentUser.displayName || "Player",
+        userPhotoURL: profile?.photoURL || currentUser.photoURL || "",
+        text: commentText.trim(),
+        createdAt: serverTimestamp(),
+      });
+      setCommentText("");
+      setShowComments(true);
+    } catch (error) {
+      console.error("Error adding comment:", error);
+    } finally {
+      setAddingComment(false);
+    }
+  };
+
+  const handleDeletePost = async () => {
+    if (!currentUser || currentUser.uid !== post.userId) return;
+    if (!confirm("Delete this post?")) return;
+
+    try {
+      await deleteDoc(doc(db, "posts", post.id));
+    } catch (error) {
+      console.error("Error deleting post:", error);
+    }
+  };
 
   if (loading) {
     return (
@@ -151,6 +236,74 @@ export default function FeedCard({ post }: FeedCardProps) {
             <source src={post.videoURL} type="video/mp4" />
             Your browser does not support embedded videos.
           </video>
+        </div>
+      )}
+
+      <div className="flex items-center gap-4 text-sm text-slate-500">
+        <button
+          onClick={() => setShowComments((prev) => !prev)}
+          className="inline-flex items-center gap-1 rounded-xl bg-slate-100 px-3 py-2 font-medium text-slate-600 hover:bg-slate-200 transition"
+        >
+          <MessageCircle className="h-4 w-4" />
+          {comments.length} Comment{comments.length === 1 ? "" : "s"}
+        </button>
+        {currentUser?.uid === post.userId && (
+          <button
+            onClick={handleDeletePost}
+            className="ml-auto inline-flex items-center gap-1 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-100"
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete
+          </button>
+        )}
+      </div>
+
+      {showComments && (
+        <div className="mt-4 space-y-3 border-t border-slate-200 pt-3">
+          {currentUser ? (
+            <div className="flex items-start gap-2">
+              <textarea
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                rows={2}
+                placeholder="Add a comment..."
+                className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-[#3B82F6] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20"
+              />
+              <button
+                onClick={handleAddComment}
+                disabled={addingComment}
+                className="rounded-xl bg-[#3B82F6] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#2563EB] disabled:opacity-60"
+              >
+                {addingComment ? "Posting..." : "Post"}
+              </button>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-500">
+              <Link href="/" className="text-[#3B82F6] underline">
+                Log in
+              </Link>{" "}
+              to join the conversation.
+            </p>
+          )}
+
+          {comments.length === 0 ? (
+            <p className="text-xs text-slate-500">No comments yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {comments.map((comment) => (
+                <div
+                  key={comment.id}
+                  className="rounded-xl bg-slate-100 px-3 py-2 text-sm text-slate-700"
+                >
+                  <p className="font-medium text-slate-800">{comment.userName || "Player"}</p>
+                  <p>{comment.text}</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {new Date(comment.createdAt).toLocaleString()}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

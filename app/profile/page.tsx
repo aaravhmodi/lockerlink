@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
 import { useProfileComplete } from "@/hooks/useProfileComplete";
-import { doc, getDoc, collection, query, where, orderBy, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, orderBy, getDocs, addDoc, serverTimestamp, onSnapshot, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Navbar from "@/components/Navbar";
 import ProfileForm from "@/components/ProfileForm";
@@ -13,6 +13,7 @@ import { Settings, MapPin, Award, Play, Upload, CheckCircle2, TrendingUp, Sparkl
 import Image from "next/image";
 import Link from "next/link";
 import { uploadImageToCloudinary, uploadVideoToCloudinary } from "@/utils/uploadToCloudinary";
+import FeedCard from "@/components/FeedCard";
 
 interface UserProfile {
   name: string;
@@ -42,6 +43,17 @@ interface Highlight {
   challengeId?: string;
 }
 
+interface Post {
+  id: string;
+  userId: string;
+  text: string;
+  imageURL?: string;
+  videoURL?: string;
+  thumbnailURL?: string;
+  mediaType?: "image" | "video" | null;
+  createdAt: number;
+}
+
 const DEFAULT_CHALLENGE_ID = "challenge-1";
 
 export default function ProfilePage() {
@@ -50,6 +62,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [highlights, setHighlights] = useState<Highlight[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [showEditForm, setShowEditForm] = useState(false);
   const [profileLoading, setProfileLoading] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -90,6 +103,33 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!user) return;
     loadProfile();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const postsQuery = query(
+      collection(db, "posts"),
+      where("userId", "==", user.uid),
+      orderBy("createdAt", "desc"),
+      limit(20)
+    );
+
+    const unsubscribe = onSnapshot(postsQuery, (snapshot) => {
+      const postsData = snapshot.docs.map((docSnap) => {
+        const data = docSnap.data() as any;
+        return {
+          id: docSnap.id,
+          ...data,
+          createdAt:
+            data.createdAt?.toMillis?.() ||
+            (typeof data.createdAt === "number" ? data.createdAt : Date.now()),
+        };
+      }) as Post[];
+      setPosts(postsData);
+    });
+
+    return () => unsubscribe();
   }, [user]);
 
   const loadProfile = async () => {
@@ -661,6 +701,28 @@ export default function ProfilePage() {
           </motion.div>
         </div>
       )}
+
+      <div className="max-w-2xl mx-auto px-4 mt-8">
+        <h2 className="mb-4 text-lg font-semibold text-[#0F172A]">Posts</h2>
+        {posts.length === 0 ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-slate-500">
+            No posts yet
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {posts.map((post, index) => (
+              <motion.div
+                key={post.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.04 }}
+              >
+                <FeedCard post={post} />
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
