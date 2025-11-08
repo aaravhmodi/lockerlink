@@ -145,11 +145,11 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6 sm:mb-8 rounded-xl sm:rounded-2xl border border-[#E5E7EB] bg-white shadow-sm overflow-hidden"
+          className="mb-6 sm:mb-8 rounded-xl sm:rounded-2xl border border-[#E5E7EB] bg-white shadow-sm overflow-hidden relative"
         >
           <div className="bg-gradient-to-br from-[#007AFF] to-[#0056CC] h-32 sm:h-40"></div>
           <div className="px-4 sm:px-8 pb-6 sm:pb-8 -mt-16 sm:-mt-20">
-            <div className="flex items-end justify-between mb-6">
+            <div className="flex items-end gap-4 mb-6 md:pr-60">
               <div className="h-24 w-24 sm:h-32 sm:w-32 rounded-full border-4 border-white bg-[#F3F4F6] shadow-lg overflow-hidden">
                 {profile.photoURL ? (
                   <Image
@@ -165,27 +165,28 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
                   </div>
                 )}
               </div>
-              {!isOwnProfile && (
-                <motion.button
-                  onClick={handleStartChat}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="flex items-center gap-2 rounded-xl bg-[#007AFF] px-4 sm:px-6 py-2.5 sm:py-3 text-white font-medium transition-all duration-200 hover:bg-[#0056CC] shadow-md hover:shadow-lg touch-manipulation min-h-[44px] text-sm sm:text-base"
-                >
-                  <HiChat className="w-5 h-5" />
-                  <span className="hidden sm:inline">Message</span>
-                  <span className="sm:hidden">Msg</span>
-                </motion.button>
-              )}
-              {isOwnProfile && (
-                <Link
-                  href="/profile"
-                  className="rounded-xl bg-[#007AFF] px-4 sm:px-6 py-2.5 sm:py-3 text-white font-medium transition-all duration-200 hover:bg-[#0056CC] shadow-md hover:shadow-lg touch-manipulation min-h-[44px] text-sm sm:text-base"
-                >
-                  Edit Profile
-                </Link>
-              )}
             </div>
+
+            {!isOwnProfile && (
+              <motion.button
+                onClick={handleStartChat}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="mt-2 flex items-center justify-center gap-2 rounded-xl bg-[#007AFF] px-4 sm:px-6 py-2.5 sm:py-3 text-white font-medium transition-all duration-200 hover:bg-[#0056CC] shadow-md hover:shadow-lg touch-manipulation min-h-[44px] text-sm sm:text-base md:absolute md:right-8 md:top-8 md:mt-0 md:w-52"
+              >
+                <HiChat className="w-5 h-5" />
+                <span className="hidden sm:inline">Message</span>
+                <span className="sm:hidden">Msg</span>
+              </motion.button>
+            )}
+            {isOwnProfile && (
+              <Link
+                href="/profile"
+                className="mt-2 flex items-center justify-center gap-2 rounded-xl bg-[#007AFF] px-4 sm:px-6 py-2.5 sm:py-3 text-white font-medium transition-all duration-200 hover:bg-[#0056CC] shadow-md hover:shadow-lg touch-manipulation min-h-[44px] text-sm sm:text-base md:absolute md:right-8 md:top-8 md:mt-0 md:w-52"
+              >
+                Edit Profile
+              </Link>
+            )}
 
             <div className="space-y-6">
               <div>
@@ -195,27 +196,39 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
                 )}
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 pt-4 sm:pt-6 border-t border-[#E5E7EB]">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 pt-4 sm:pt-6 border-t border-[#E5E7EB]">
                 {profile.age && (
-                  <div>
+                  <div className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
                     <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">Age</p>
                     <p className="text-xl font-semibold text-[#111827]">{profile.age}</p>
                   </div>
                 )}
+                {profile.height && (
+                  <div className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
+                    <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">Height</p>
+                    <p className="text-xl font-semibold text-[#111827]">{profile.height}</p>
+                  </div>
+                )}
+                {profile.vertical && (
+                  <div className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
+                    <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">Vertical</p>
+                    <p className="text-xl font-semibold text-[#111827]">{profile.vertical}</p>
+                  </div>
+                )}
+                {profile.weight && (
+                  <div className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
+                    <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">Weight</p>
+                    <p className="text-xl font-semibold text-[#111827]">{profile.weight}</p>
+                  </div>
+                )}
                 {profile.position && (
-                  <div>
+                  <div className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
                     <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">Position</p>
                     <p className="text-xl font-semibold text-[#111827]">{profile.position}</p>
                   </div>
                 )}
-                {profile.sport && (
-                  <div>
-                    <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">Sport</p>
-                    <p className="text-xl font-semibold text-[#111827]">{profile.sport}</p>
-                  </div>
-                )}
                 {profile.city && (
-                  <div>
+                  <div className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
                     <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">City</p>
                     <p className="text-xl font-semibold text-[#111827]">{profile.city}</p>
                   </div>

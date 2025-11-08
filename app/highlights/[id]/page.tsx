@@ -20,7 +20,7 @@ import { db } from "@/lib/firebase";
 import Navbar from "@/components/Navbar";
 import ProfileGuard from "@/components/ProfileGuard";
 import { motion } from "framer-motion";
-import { ArrowLeft, Heart, MessageCircle, Share2, Play } from "lucide-react";
+import { ArrowLeft, Heart, MessageCircle, Share2, Play, Trophy } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -40,6 +40,8 @@ interface Highlight {
   likedBy?: string[];
   commentsCount?: number;
   views?: number;
+  submittedToChallenge?: boolean;
+  challengeId?: string;
 }
 
 interface HighlightComment {
@@ -317,7 +319,15 @@ export default function HighlightViewerPage({ params }: { params: Promise<{ id: 
 
             {/* Title and Description */}
             <div className="mb-6">
-              <h1 className="text-2xl font-bold text-[#0F172A] mb-2">{highlight.title}</h1>
+              <div className="flex items-center gap-3 mb-2 flex-wrap">
+                <h1 className="text-2xl font-bold text-[#0F172A]">{highlight.title}</h1>
+                {highlight.submittedToChallenge && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#FACC15] px-3 py-1 text-xs font-semibold text-[#0F172A]">
+                    <Trophy className="w-3 h-3" />
+                    Challenge Submission
+                  </span>
+                )}
+              </div>
               {highlight.description && (
                 <p className="text-slate-700 leading-relaxed">{highlight.description}</p>
               )}

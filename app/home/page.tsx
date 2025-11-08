@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
-import { collection, getDocs, doc, getDoc, query, orderBy, limit, onSnapshot } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, orderBy, limit, onSnapshot, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Navbar from "@/components/Navbar";
 import ProfileGuard from "@/components/ProfileGuard";
@@ -34,10 +34,12 @@ interface Match {
 interface Highlight {
   id: string;
   userName?: string;
+  userPosition?: string;
   title: string;
   upvotes: number;
   rank: number;
   thumbnailURL?: string;
+  commentsCount?: number;
 }
 
 interface Challenge {
@@ -54,6 +56,8 @@ interface SearchUser {
   position?: string;
   photoURL?: string;
   city?: string;
+  latestPostText?: string | null;
+  latestPostCreatedAt?: number | null;
 }
 
 interface Post {
@@ -182,7 +186,7 @@ export default function HomePage() {
     const timeoutId = setTimeout(async () => {
       setSearching(true);
       setShowSearch(true);
-      
+
       try {
         const usersSnapshot = await getDocs(collection(db, "users"));
         const allUsers = usersSnapshot.docs.map((doc) => ({
@@ -200,7 +204,44 @@ export default function HomePage() {
             u.city?.toLowerCase().includes(queryLower)
         );
 
-        setSearchResults(filtered);
+        const limitedUsers = filtered.slice(0, 8);
+        const enhancedUsers = await Promise.all(
+          limitedUsers.map(async (u) => {
+            try {
+              const latestPostSnapshot = await getDocs(
+                query(
+                  collection(db, "posts"),
+                  where("userId", "==", u.id),
+                  orderBy("createdAt", "desc"),
+                  limit(1)
+                )
+              );
+
+              if (!latestPostSnapshot.empty) {
+                const latestPostData = latestPostSnapshot.docs[0].data() as Post;
+                const createdAt =
+                  (latestPostData.createdAt as any)?.toMillis?.() ||
+                  (typeof latestPostData.createdAt === "number" ? latestPostData.createdAt : null);
+
+                return {
+                  ...u,
+                  latestPostText: latestPostData.text || (latestPostData.videoURL ? "Shared a new video" : null),
+                  latestPostCreatedAt: createdAt,
+                };
+              }
+            } catch (postError) {
+              console.error("Error fetching latest post:", postError);
+            }
+
+            return {
+              ...u,
+              latestPostText: null,
+              latestPostCreatedAt: null,
+            };
+          })
+        );
+
+        setSearchResults(enhancedUsers);
       } catch (error) {
         console.error("Error searching:", error);
       } finally {
@@ -344,6 +385,12 @@ export default function HomePage() {
                               {user.position && (
                                 <div className="text-sm text-slate-500">{user.position}</div>
                               )}
+                              {user.latestPostText && (
+                                <div className="mt-1 text-xs text-slate-500 truncate">
+                                  <span className="font-medium text-slate-600">Latest post:</span>{" "}
+                                  {user.latestPostText}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -398,6 +445,22 @@ export default function HomePage() {
             </Link>
           </div>
 
+          {/* About section */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mb-6"
+          >
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+              <h2 className="text-lg font-semibold text-[#0F172A] mb-2">About LockerLink</h2>
+              <p className="text-sm text-slate-600 leading-relaxed">
+                LockerLink connects volleyball athletes, coaches, and recruiters. Share your progress, find teammates,
+                and showcase highlights—all built for the next generation of talent.
+              </p>
+            </div>
+          </motion.div>
+
           {/* Post Composer */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -424,11 +487,18 @@ export default function HomePage() {
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 bg-gradient-to-br from-[#3B82F6] to-[#2563EB] rounded-full flex items-center justify-center text-white font-semibold">
-                          {topHighlights[0]?.userName?.split(' ').map((n: string) => n[0]).join('') || 'MC'}
+                          {topHighlights[0]?.userName
+                            ? topHighlights[0].userName
+                                .split(" ")
+                                .map((n: string) => n[0])
+                                .join("")
+                            : "PL"}
                         </div>
                         <div>
-                          <h4 className="font-semibold text-[#0F172A]">{topHighlights[0]?.userName || "Marcus Chen"}</h4>
-                          <p className="text-sm text-slate-500">Middle Blocker</p>
+                          <h4 className="font-semibold text-[#0F172A]">{topHighlights[0]?.userName || "Player"}</h4>
+                          {topHighlights[0]?.userPosition && (
+                            <p className="text-sm text-slate-500">{topHighlights[0].userPosition}</p>
+                          )}
                         </div>
                       </div>
                       <div className="bg-[#FACC15] text-[#0F172A] px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
@@ -463,16 +533,16 @@ export default function HomePage() {
                     {/* Video Info */}
                     <div>
                       <h3 className="font-semibold text-[#0F172A] mb-2">
-                        {topHighlights[0]?.title || "Game winning block"} 🔥
+                        {topHighlights[0]?.title || "Highlight"}
                       </h3>
                       <div className="flex items-center gap-4 text-slate-600 text-sm">
                         <div className="flex items-center gap-1">
                           <Heart className="w-4 h-4" />
-                          <span>{topHighlights[0]?.upvotes || 234}</span>
+                          <span>{topHighlights[0]?.upvotes ?? 0}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <MessageCircle className="w-4 h-4" />
-                          <span>42</span>
+                          <span>{topHighlights[0]?.commentsCount ?? 0}</span>
                         </div>
                       </div>
                     </div>

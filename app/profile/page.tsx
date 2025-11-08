@@ -38,7 +38,11 @@ interface Highlight {
   upvotes: number;
   createdAt: number;
   views?: number;
+  submittedToChallenge?: boolean;
+  challengeId?: string;
 }
+
+const DEFAULT_CHALLENGE_ID = "challenge-1";
 
 export default function ProfilePage() {
   const { user, loading } = useUser();
@@ -56,6 +60,7 @@ export default function ProfilePage() {
   const [uploading, setUploading] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [profileWasIncomplete, setProfileWasIncomplete] = useState(false);
+  const [submitHighlightToChallenge, setSubmitHighlightToChallenge] = useState(false);
 
   // Auto-show edit form if profile is incomplete
   useEffect(() => {
@@ -191,13 +196,15 @@ export default function ProfilePage() {
         likedBy: [],
         commentsCount: 0,
         createdAt: serverTimestamp(),
-        challengeId: "",
+        challengeId: submitHighlightToChallenge ? DEFAULT_CHALLENGE_ID : "",
+        submittedToChallenge: submitHighlightToChallenge,
       });
 
       setVideoFile(null);
       setThumbnailFile(null);
       setUploadTitle("");
       setUploadDescription("");
+      setSubmitHighlightToChallenge(false);
       setShowUploadModal(false);
       
       // Reload highlights
@@ -324,8 +331,8 @@ export default function ProfilePage() {
 
       {/* Profile info */}
       <div className="max-w-2xl mx-auto px-4 -mt-16 mb-6">
-        <div className="bg-white rounded-3xl p-6 shadow-lg">
-          <div className="flex items-start gap-4 mb-4">
+        <div className="bg-white rounded-3xl p-6 shadow-lg relative">
+          <div className="flex items-start gap-4 mb-4 md:pr-64">
             {/* Avatar */}
             <div className="w-24 h-24 bg-gradient-to-br from-[#FACC15] to-[#F59E0B] rounded-2xl flex items-center justify-center -mt-12 shadow-xl overflow-hidden">
               {userProfile?.photoURL ? (
@@ -387,7 +394,7 @@ export default function ProfilePage() {
 
           {/* Stats */}
           {stats.length > 0 && (
-            <div className="grid grid-cols-1 gap-3 mb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4 md:pr-64">
               {stats.map((stat) => {
                 const Icon = stat.icon;
                 return (
@@ -402,20 +409,20 @@ export default function ProfilePage() {
           )}
 
           {/* Action buttons */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="mt-6 flex flex-col gap-3 md:absolute md:right-6 md:top-6 md:w-60">
             <motion.button
               onClick={() => setShowEditForm(true)}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="rounded-xl bg-gradient-to-r from-[#3B82F6] to-[#2563EB] hover:from-[#2563EB] hover:to-[#1D4ED8] text-white px-6 py-3 font-medium shadow-sm hover:shadow-md transition-all"
+              className="flex items-center justify-center gap-2 rounded-xl bg-[#007AFF] px-4 sm:px-6 py-2.5 sm:py-3 text-white font-medium transition-all duration-200 hover:bg-[#0056CC] shadow-md hover:shadow-lg touch-manipulation min-h-[44px] text-sm sm:text-base"
             >
               Edit Profile
             </motion.button>
-            <Link href="/match">
+            <Link href="/match" className="contents">
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="w-full rounded-xl border border-[#3B82F6] text-[#3B82F6] hover:bg-blue-50 px-6 py-3 font-medium transition-all"
+                className="flex items-center justify-center gap-2 rounded-xl border border-[#3B82F6] bg-white px-4 sm:px-6 py-2.5 sm:py-3 text-[#3B82F6] font-medium transition-all duration-200 hover:bg-blue-50 shadow-sm hover:shadow-md touch-manipulation min-h-[44px] text-sm sm:text-base"
               >
                 Find Match
               </motion.button>
@@ -429,7 +436,10 @@ export default function ProfilePage() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-[#0F172A] font-semibold">My Highlights</h2>
           <motion.button
-            onClick={() => setShowUploadModal(true)}
+            onClick={() => {
+              setSubmitHighlightToChallenge(false);
+              setShowUploadModal(true);
+            }}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className="flex items-center gap-2 rounded-xl border border-slate-200 hover:bg-slate-50 px-4 py-2 text-sm font-medium transition-all"
@@ -460,6 +470,11 @@ export default function ProfilePage() {
                     <Play className="w-8 h-8 text-slate-400" />
                   </div>
                 )}
+                {highlight.submittedToChallenge && (
+                  <div className="absolute top-2 right-2 rounded-full bg-[#FACC15] text-[#0F172A] px-2 py-1 text-xs font-semibold shadow">
+                    Challenge
+                  </div>
+                )}
                   
                   {/* Overlay */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
@@ -488,7 +503,10 @@ export default function ProfilePage() {
             <Play className="w-16 h-16 text-slate-300 mx-auto mb-4" />
             <p className="text-slate-600 mb-2">No highlights yet</p>
             <motion.button
-              onClick={() => setShowUploadModal(true)}
+              onClick={() => {
+                setSubmitHighlightToChallenge(false);
+                setShowUploadModal(true);
+              }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className="rounded-xl bg-[#007AFF] px-6 py-3 text-white font-medium shadow-sm hover:shadow-md transition-all inline-flex items-center gap-2"
@@ -552,6 +570,32 @@ export default function ProfilePage() {
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 resize-none"
                 />
               </div>
+
+              <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-[#0F172A]">Submit to Highlight Challenge?</p>
+                  <p className="text-xs text-slate-500">
+                    Turn this on if you want this highlight considered for the current challenge.
+                  </p>
+                </div>
+                <label className="inline-flex items-center gap-2">
+                  <span className="text-sm text-slate-600">No</span>
+                  <button
+                    type="button"
+                    onClick={() => setSubmitHighlightToChallenge((prev) => !prev)}
+                    className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
+                      submitHighlightToChallenge ? "bg-[#3B82F6]" : "bg-slate-300"
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-5 w-5 transform rounded-full bg-white transition ${
+                        submitHighlightToChallenge ? "translate-x-6" : "translate-x-1"
+                      }`}
+                    />
+                  </button>
+                  <span className="text-sm text-slate-600">Yes</span>
+                </label>
+              </div>
             </div>
 
             <div className="flex gap-3 mt-6">
@@ -562,6 +606,7 @@ export default function ProfilePage() {
                   setThumbnailFile(null);
                   setUploadTitle("");
                   setUploadDescription("");
+                  setSubmitHighlightToChallenge(false);
                 }}
                 disabled={uploading}
                 className="flex-1 rounded-xl border border-slate-200 bg-white px-6 py-3 text-[#111827] font-medium transition-all duration-200 hover:bg-slate-50 disabled:opacity-50"

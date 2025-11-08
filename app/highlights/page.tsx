@@ -29,6 +29,8 @@ interface Highlight {
   rank?: number;
   likedBy?: string[];
   commentsCount?: number;
+  submittedToChallenge?: boolean;
+  challengeId?: string;
 }
 
 interface Challenge {
@@ -51,6 +53,7 @@ export default function HighlightsPage() {
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadDescription, setUploadDescription] = useState("");
+  const [submitToChallenge, setSubmitToChallenge] = useState(true);
 
   useEffect(() => {
     if (!user) return;
@@ -91,7 +94,9 @@ export default function HighlightsPage() {
           } as Highlight;
         });
 
-        const ranked = [...highlightData]
+        const challengeOnly = highlightData.filter((highlight) => highlight.submittedToChallenge);
+
+        const ranked = [...challengeOnly]
           .sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0))
           .map((highlight, index) => ({
             ...highlight,
@@ -167,13 +172,15 @@ export default function HighlightsPage() {
         likedBy: [],
         commentsCount: 0,
         createdAt: serverTimestamp(),
-        challengeId: currentChallenge?.id || "",
+        challengeId: submitToChallenge ? currentChallenge?.id || "" : "",
+        submittedToChallenge: submitToChallenge,
       });
 
       setVideoFile(null);
       setThumbnailFile(null);
       setUploadTitle("");
       setUploadDescription("");
+      setSubmitToChallenge(true);
       setShowUploadModal(false);
       alert("Highlight uploaded successfully!");
     } catch (error) {
@@ -281,7 +288,10 @@ export default function HighlightsPage() {
         <div className="max-w-2xl mx-auto px-4 py-6">
           <motion.div
             whileHover={{ scale: 1.01 }}
-            onClick={() => setShowUploadModal(true)}
+          onClick={() => {
+            setSubmitToChallenge(true);
+            setShowUploadModal(true);
+          }}
             className="bg-gradient-to-br from-[#FACC15] to-[#F59E0B] rounded-2xl p-6 shadow-lg cursor-pointer"
           >
             <div className="flex items-center gap-4">
@@ -499,11 +509,44 @@ export default function HighlightsPage() {
                     className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 resize-none"
                   />
                 </div>
+
+                <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-[#0F172A]">Submit to Highlight Challenge?</p>
+                    <p className="text-xs text-slate-500">
+                      Turn this on to enter the current challenge. Otherwise your video stays on your profile and explore.
+                    </p>
+                  </div>
+                  <label className="inline-flex items-center gap-2">
+                    <span className="text-sm text-slate-600">No</span>
+                    <button
+                      type="button"
+                      onClick={() => setSubmitToChallenge((prev) => !prev)}
+                      className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
+                        submitToChallenge ? "bg-[#3B82F6]" : "bg-slate-300"
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-5 w-5 transform rounded-full bg-white transition ${
+                          submitToChallenge ? "translate-x-6" : "translate-x-1"
+                        }`}
+                      />
+                    </button>
+                    <span className="text-sm text-slate-600">Yes</span>
+                  </label>
+                </div>
               </div>
 
               <div className="flex gap-3 mt-6">
                 <button
-                  onClick={() => setShowUploadModal(false)}
+                  onClick={() => {
+                    setShowUploadModal(false);
+                    setVideoFile(null);
+                    setThumbnailFile(null);
+                    setUploadTitle("");
+                    setUploadDescription("");
+                    setSubmitToChallenge(true);
+                  }}
                   disabled={uploading}
                   className="flex-1 rounded-xl border border-slate-200 bg-white px-6 py-3 text-[#111827] font-medium transition-all duration-200 hover:bg-slate-50 disabled:opacity-50"
                 >
