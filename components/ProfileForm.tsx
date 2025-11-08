@@ -164,8 +164,6 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
       setPhotoFile(null);
       
       // Show success message
-      alert("Profile saved successfully!");
-      
       if (onSave) {
         await onSave();
       }

@@ -9,7 +9,7 @@ import { db } from "@/lib/firebase";
 import Navbar from "@/components/Navbar";
 import ProfileForm from "@/components/ProfileForm";
 import { motion } from "framer-motion";
-import { Settings, MapPin, Award, Play, Upload } from "lucide-react";
+import { Settings, MapPin, Award, Play, Upload, CheckCircle2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { uploadImageToCloudinary, uploadVideoToCloudinary } from "@/utils/uploadToCloudinary";
@@ -39,7 +39,7 @@ interface Highlight {
 
 export default function ProfilePage() {
   const { user, loading } = useUser();
-  const { isComplete } = useProfileComplete();
+  const { isComplete, loading: profileStatusLoading } = useProfileComplete();
   const router = useRouter();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [highlights, setHighlights] = useState<Highlight[]>([]);
@@ -51,13 +51,33 @@ export default function ProfilePage() {
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadDescription, setUploadDescription] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [profileWasIncomplete, setProfileWasIncomplete] = useState(false);
 
   // Auto-show edit form if profile is incomplete
   useEffect(() => {
-    if (!loading && !profileLoading && !isComplete) {
+    if (!loading && !profileLoading && !profileStatusLoading && !isComplete) {
       setShowEditForm(true);
     }
-  }, [loading, profileLoading, isComplete]);
+  }, [loading, profileLoading, profileStatusLoading, isComplete]);
+
+  useEffect(() => {
+    if (loading || profileStatusLoading) {
+      return;
+    }
+
+    if (!isComplete) {
+      if (!profileWasIncomplete) {
+        setProfileWasIncomplete(true);
+      }
+      return;
+    }
+
+    if (profileWasIncomplete) {
+      setShowCompletionModal(true);
+      setProfileWasIncomplete(false);
+    }
+  }, [loading, profileStatusLoading, isComplete, profileWasIncomplete]);
 
   useEffect(() => {
     if (!user) return;
@@ -189,7 +209,7 @@ export default function ProfilePage() {
     { label: "Highlights", value: highlights.length.toString(), icon: Play },
   ];
 
-  if (loading || profileLoading) {
+  if (loading || profileLoading || profileStatusLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white pb-20 md:pb-0">
         <Navbar />
@@ -515,6 +535,41 @@ export default function ProfilePage() {
               >
                 {uploading ? "Uploading..." : "Upload"}
               </motion.button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {showCompletionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="max-w-sm w-full rounded-2xl bg-white p-6 text-center shadow-xl border border-[#E5E7EB]"
+          >
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50">
+              <CheckCircle2 className="h-10 w-10 text-emerald-500" />
+            </div>
+            <h2 className="text-2xl font-semibold text-[#0F172A] mb-2">Profile Complete!</h2>
+            <p className="text-sm text-[#4B5563] mb-6">
+              You’re all set. Explore highlights, find matches, and connect with other athletes.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowCompletionModal(false)}
+                className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-[#111827] transition-colors hover:bg-slate-50"
+              >
+                Stay Here
+              </button>
+              <button
+                onClick={() => {
+                  setShowCompletionModal(false);
+                  router.push("/home");
+                }}
+                className="flex-1 rounded-xl bg-[#007AFF] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#0056CC]"
+              >
+                Go to Home
+              </button>
             </div>
           </motion.div>
         </div>
