@@ -52,6 +52,7 @@ interface Post {
   thumbnailURL?: string;
   mediaType?: "image" | "video" | null;
   createdAt: number;
+  commentsCount?: number;
 }
 
 const DEFAULT_CHALLENGE_ID = "challenge-1";
@@ -124,6 +125,7 @@ export default function ProfilePage() {
           createdAt:
             data.createdAt?.toMillis?.() ||
             (typeof data.createdAt === "number" ? data.createdAt : Date.now()),
+          commentsCount: data.commentsCount || 0,
         };
       }) as Post[];
       setPosts(postsData);

@@ -9,10 +9,12 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  increment,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
+  updateDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { motion } from "framer-motion";
@@ -28,6 +30,7 @@ interface Post {
   thumbnailURL?: string;
   mediaType?: "image" | "video" | null;
   createdAt: number;
+  commentsCount?: number;
 }
 
 interface User {
@@ -69,6 +72,7 @@ export default function FeedCard({ post }: FeedCardProps) {
   const [videoError, setVideoError] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [addingComment, setAddingComment] = useState(false);
+  const [commentCount, setCommentCount] = useState(post.commentsCount ?? 0);
   const [comments, setComments] = useState<
     Array<{
       id: string;
@@ -130,6 +134,7 @@ export default function FeedCard({ post }: FeedCardProps) {
         };
       });
       setComments(data);
+      setCommentCount(data.length);
     });
 
     return () => unsubscribe();
@@ -149,8 +154,12 @@ export default function FeedCard({ post }: FeedCardProps) {
         text: commentText.trim(),
         createdAt: serverTimestamp(),
       });
+      await updateDoc(doc(db, "posts", post.id), {
+        commentsCount: increment(1),
+      });
       setCommentText("");
       setShowComments(true);
+      setCommentCount((prev) => prev + 1);
     } catch (error) {
       console.error("Error adding comment:", error);
     } finally {
@@ -245,7 +254,7 @@ export default function FeedCard({ post }: FeedCardProps) {
           className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 font-medium text-slate-600 hover:bg-slate-200 transition"
         >
           <MessageCircle className="h-4 w-4" />
-          {comments.length} Comment{comments.length === 1 ? "" : "s"}
+          {commentCount} Comment{commentCount === 1 ? "" : "s"}
         </button>
         {currentUser?.uid === post.userId && (
           <button

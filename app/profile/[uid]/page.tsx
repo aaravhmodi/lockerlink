@@ -21,6 +21,7 @@ interface Post {
   thumbnailURL?: string;
   mediaType?: "image" | "video" | null;
   createdAt: number;
+  commentsCount?: number;
 }
 
 export default function UserProfilePage({ params }: { params: Promise<{ uid: string }> }) {
@@ -65,6 +66,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
             id: docSnap.id,
             ...data,
             createdAt: data.createdAt?.toMillis?.() || data.createdAt || Date.now(),
+            commentsCount: data.commentsCount || 0,
           } as Post;
         });
         setPosts(postsData);
