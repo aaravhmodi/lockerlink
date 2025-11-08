@@ -275,6 +275,23 @@ export default function ProfilePage() {
             <Settings className="w-6 h-6 text-slate-600" />
           </button>
         </div>
+        {isComplete && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-2xl mx-auto px-4 pb-4"
+          >
+            <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-sm">
+                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+              </div>
+              <div className="text-sm text-[#14532D]">
+                <p className="font-semibold">Profile Complete</p>
+                <p>You’re all set. Explore highlights, match with players, and connect across LockerLink.</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
       </div>
 
       {/* Profile banner */}
