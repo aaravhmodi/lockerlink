@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
-import { collection, getDocs, doc, getDoc, query, orderBy, limit } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, orderBy, limit, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Navbar from "@/components/Navbar";
 import ProfileGuard from "@/components/ProfileGuard";
@@ -11,6 +11,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Trophy, Clock, Upload, Flame, Star, TrendingUp, MessageCircle, ArrowRight, Sparkles, Play, Users, Zap, Heart, Search, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import FeedCard from "@/components/FeedCard";
+import PostComposer from "@/components/PostComposer";
 
 interface UserProfile {
   name: string;
@@ -59,6 +61,9 @@ interface Post {
   userId: string;
   text: string;
   imageURL?: string;
+  videoURL?: string;
+  thumbnailURL?: string;
+  mediaType?: "image" | "video" | null;
   createdAt: number;
 }
 
@@ -74,10 +79,44 @@ export default function HomePage() {
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
   const [showSearch, setShowSearch] = useState(false);
   const [searching, setSearching] = useState(false);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [postsLoading, setPostsLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
     loadData();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const postsQuery = query(
+      collection(db, "posts"),
+      orderBy("createdAt", "desc"),
+      limit(10)
+    );
+
+    const unsubscribe = onSnapshot(
+      postsQuery,
+      (snapshot) => {
+        const postsData = snapshot.docs.map((docSnap) => {
+          const data = docSnap.data() as any;
+          return {
+            id: docSnap.id,
+            ...data,
+            createdAt: data.createdAt?.toMillis?.() || data.createdAt || Date.now(),
+          } as Post;
+        });
+        setPosts(postsData);
+        setPostsLoading(false);
+      },
+      (error) => {
+        console.error("Error loading home feed:", error);
+        setPostsLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
   }, [user]);
 
 
@@ -359,6 +398,16 @@ export default function HomePage() {
             </Link>
           </div>
 
+          {/* Post Composer */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+            className="mb-6"
+          >
+            <PostComposer />
+          </motion.div>
+
           {/* Latest Highlights Section */}
           {topHighlights.length > 0 && (
             <motion.div
@@ -432,7 +481,36 @@ export default function HomePage() {
             </motion.div>
           )}
 
-
+          {/* Home Feed */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35 }}
+          >
+            <h2 className="text-[#0F172A] font-semibold mb-4 text-lg">Latest from the community</h2>
+            {postsLoading ? (
+              <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">
+                Loading feed...
+              </div>
+            ) : posts.length > 0 ? (
+              <div className="space-y-4">
+                {posts.map((post, index) => (
+                  <motion.div
+                    key={post.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <FeedCard post={post} />
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">
+                Be the first to post an update today.
+              </div>
+            )}
+          </motion.div>
         </div>
       </div>
     </ProfileGuard>

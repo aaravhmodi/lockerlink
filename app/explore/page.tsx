@@ -44,6 +44,9 @@ interface Post {
   userId: string;
   text: string;
   imageURL?: string;
+  videoURL?: string;
+  thumbnailURL?: string;
+  mediaType?: "image" | "video" | null;
   createdAt: number;
 }
 
@@ -70,13 +73,23 @@ export default function ExplorePage() {
       limPosts(12)
     );
 
-    const unsubscribePosts = onSnapshot(postsQuery, (snapshot) => {
-      const postsData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Post[];
-      setPosts(postsData);
-    });
+    const unsubscribePosts = onSnapshot(
+      postsQuery,
+      (snapshot) => {
+        const postsData = snapshot.docs.map((docSnap) => {
+          const data = docSnap.data() as any;
+          return {
+            id: docSnap.id,
+            ...data,
+            createdAt: data.createdAt?.toMillis?.() || data.createdAt || Date.now(),
+          } as Post;
+        });
+        setPosts(postsData);
+      },
+      (error) => {
+        console.error("Error loading posts:", error);
+      }
+    );
 
     const highlightsQuery = query(
       collection(db, "highlights"),

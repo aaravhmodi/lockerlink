@@ -17,6 +17,9 @@ interface Post {
   userId: string;
   text: string;
   imageURL?: string;
+  videoURL?: string;
+  thumbnailURL?: string;
+  mediaType?: "image" | "video" | null;
   createdAt: number;
 }
 
@@ -53,13 +56,23 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
       orderBy("createdAt", "desc")
     );
 
-    const unsubscribe = onSnapshot(postsQuery, (snapshot) => {
-      const postsData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Post[];
-      setPosts(postsData);
-    });
+    const unsubscribe = onSnapshot(
+      postsQuery,
+      (snapshot) => {
+        const postsData = snapshot.docs.map((docSnap) => {
+          const data = docSnap.data() as any;
+          return {
+            id: docSnap.id,
+            ...data,
+            createdAt: data.createdAt?.toMillis?.() || data.createdAt || Date.now(),
+          } as Post;
+        });
+        setPosts(postsData);
+      },
+      (error) => {
+        console.error("Error loading profile posts:", error);
+      }
+    );
 
     return () => unsubscribe();
   }, [uid]);
