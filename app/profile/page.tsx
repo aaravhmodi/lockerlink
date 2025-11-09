@@ -9,12 +9,24 @@ import { db } from "@/lib/firebase";
 import Navbar from "@/components/Navbar";
 import ProfileForm from "@/components/ProfileForm";
 import { motion } from "framer-motion";
-import { Settings, MapPin, Award, Play, Upload, CheckCircle2, TrendingUp, Sparkles, Trophy } from "lucide-react";
+import {
+  Settings,
+  MapPin,
+  Award,
+  Play,
+  Upload,
+  CheckCircle2,
+  TrendingUp,
+  Sparkles,
+  Trophy,
+  Users,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { uploadImageToCloudinary, uploadVideoToCloudinary } from "@/utils/uploadToCloudinary";
 import { formatHeight, formatVertical, formatWeight } from "@/utils/formatMetrics";
 import FeedCard from "@/components/FeedCard";
+import ManagePostsModal from "@/components/ManagePostsModal";
 
 interface UserProfile {
   name: string;
@@ -71,6 +83,7 @@ export default function ProfilePage() {
   const [showEditForm, setShowEditForm] = useState(false);
   const [profileLoading, setProfileLoading] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showManagePosts, setShowManagePosts] = useState(false);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [uploadTitle, setUploadTitle] = useState("");
@@ -268,6 +281,25 @@ export default function ProfilePage() {
   };
 
   const isCoachProfile = userProfile?.userType === "coach";
+  const coachInfoCards = isCoachProfile
+    ? [
+        {
+          label: "Team / Club",
+          value: userProfile?.team,
+          icon: Users,
+        },
+        {
+          label: "Division",
+          value: userProfile?.division,
+          icon: Award,
+        },
+        {
+          label: "Region",
+          value: userProfile?.city,
+          icon: MapPin,
+        },
+      ].filter((card) => card.value)
+    : [];
   const stats = isCoachProfile
     ? [
         {
@@ -298,6 +330,9 @@ export default function ProfilePage() {
           icon: Play,
         },
       ];
+  const statsGridClass = isCoachProfile
+    ? "grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4"
+    : "grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4";
 
   if (loading || profileLoading || profileStatusLoading) {
     return (
@@ -447,33 +482,11 @@ export default function ProfilePage() {
             <p className="text-slate-700 mb-4 leading-relaxed">{userProfile.bio}</p>
           )}
 
-          {/* Team */}
-          {userProfile?.team && (
+          {/* Profile details */}
+          {!isCoachProfile && userProfile?.team && (
             <div className="bg-slate-50 rounded-2xl p-4 mb-4">
-              <p className="text-slate-500 text-sm mb-1">
-                {isCoachProfile ? "Team / Club" : "Current Team"}
-              </p>
+              <p className="text-slate-500 text-sm mb-1">Current Team</p>
               <p className="text-[#0F172A] font-medium">{userProfile.team}</p>
-            </div>
-          )}
-          {isCoachProfile && userProfile?.division && (
-            <div className="bg-slate-50 rounded-2xl p-4 mb-4">
-              <p className="text-slate-500 text-sm mb-1">Division</p>
-              <p className="text-[#0F172A] font-medium">{userProfile.division}</p>
-            </div>
-          )}
-          {isCoachProfile && userProfile?.city && (
-            <div className="bg-slate-50 rounded-2xl p-4 mb-4">
-              <p className="text-slate-500 text-sm mb-1">Region</p>
-              <p className="text-[#0F172A] font-medium">{userProfile.city}</p>
-            </div>
-          )}
-          {isCoachProfile && userProfile?.coachMessage && (
-            <div className="bg-gradient-to-br from-[#EFF6FF] via-white to-white border border-[#DBEAFE] rounded-3xl p-6 mb-4">
-              <p className="text-sm font-semibold text-[#2563EB] uppercase tracking-wide mb-2">
-                Message to Athletes
-              </p>
-              <p className="text-[#1E3A8A] leading-relaxed">{userProfile.coachMessage}</p>
             </div>
           )}
           {!isCoachProfile && userProfile?.city && (
@@ -482,10 +495,46 @@ export default function ProfilePage() {
               <p className="text-[#0F172A] font-medium">{userProfile.city}</p>
             </div>
           )}
+          {isCoachProfile && coachInfoCards.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+              {coachInfoCards.map((card) => {
+                const Icon = card.icon;
+                return (
+                  <div
+                    key={card.label}
+                    className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+                  >
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-[#2563EB]">
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        {card.label}
+                      </p>
+                      <p className="text-sm font-semibold text-[#0F172A] truncate">{card.value}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {isCoachProfile && userProfile?.coachMessage && (
+            <div className="mb-4 rounded-3xl border border-[#DBEAFE] bg-gradient-to-br from-[#EFF6FF] via-white to-white p-5 shadow-sm">
+              <div className="mb-3 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#2563EB]/15 text-[#2563EB] text-base font-semibold">
+                  ✉️
+                </div>
+                <p className="text-sm font-semibold uppercase tracking-wide text-[#2563EB]">
+                  Message to Athletes
+                </p>
+              </div>
+              <p className="text-sm leading-relaxed text-[#1E3A8A]">{userProfile.coachMessage}</p>
+            </div>
+          )}
 
           {/* Stats */}
           {stats.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <div className={statsGridClass}>
               {stats.map((stat) => {
                 const Icon = stat.icon;
                 return (
@@ -509,15 +558,23 @@ export default function ProfilePage() {
             >
               Edit Profile
             </motion.button>
-            <Link href="/match" className="contents">
+            <Link href={isCoachProfile ? "/coach" : "/match"} className="contents">
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="flex items-center justify-center gap-2 rounded-xl border border-[#3B82F6] bg-white px-4 sm:px-6 py-2.5 sm:py-3 text-[#3B82F6] font-medium transition-all duration-200 hover:bg-blue-50 shadow-sm hover:shadow-md touch-manipulation min-h-[44px] text-sm sm:text-base"
               >
-                Find Match
+                {isCoachProfile ? "Open Coach Dashboard" : "Find Match"}
               </motion.button>
             </Link>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowManagePosts(true)}
+              className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 sm:px-6 py-2.5 sm:py-3 text-slate-600 font-medium transition-all duration-200 hover:bg-slate-50 shadow-sm hover:shadow-md touch-manipulation min-h-[44px] text-sm sm:text-base"
+            >
+              Manage Posts
+            </motion.button>
           </div>
         </div>
       </div>
@@ -752,6 +809,8 @@ export default function ProfilePage() {
           </motion.div>
         </div>
       )}
+
+      <ManagePostsModal open={showManagePosts} onClose={() => setShowManagePosts(false)} />
 
       <div className="max-w-2xl mx-auto px-4 mt-8">
         <h2 className="mb-4 text-lg font-semibold text-[#0F172A]">Posts</h2>
