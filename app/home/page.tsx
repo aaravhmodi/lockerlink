@@ -319,6 +319,32 @@ export default function HomePage() {
             </div>
           </motion.div>
 
+          {/* Discord announcement */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="mb-6"
+          >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-3xl border border-indigo-200 bg-gradient-to-r from-indigo-50 via-white to-slate-50 px-5 py-4 shadow-sm">
+              <div className="space-y-1">
+                <h2 className="text-base sm:text-lg font-semibold text-[#1D4ED8]">Join the LockerLink Discord</h2>
+                <p className="text-sm text-[#1E293B]">
+                  Grab updates, drop feedback, and help shape new features with the community.
+                </p>
+              </div>
+              <Link
+                href="https://discord.gg/YuPY8qBd"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#5865F2] px-4 py-2 text-sm font-semibold text-white shadow hover:bg-[#4752C4] transition-colors"
+              >
+                Join Discord
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </motion.div>
+
           {/* Welcome Section */}
           <motion.div
             initial={{ opacity: 0, y: -10 }}
