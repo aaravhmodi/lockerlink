@@ -21,6 +21,9 @@ interface UserProfile {
   vertical: string;
   weight: string;
   photoURL?: string;
+  userType: "athlete" | "coach";
+  division?: string;
+  coachMessage?: string;
 }
 
 interface ProfileFormProps {
@@ -61,6 +64,9 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
     vertical: "",
     weight: "",
     photoURL: "",
+    userType: "athlete",
+  division: "",
+  coachMessage: "",
   });
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -70,6 +76,39 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
   const [heightInches, setHeightInches] = useState<string>("");
   const [verticalInches, setVerticalInches] = useState<string>("");
   const [weightLbs, setWeightLbs] = useState<string>("");
+  const isCoach = formData.userType === "coach";
+
+  const handleUserTypeSelect = (nextType: "athlete" | "coach") => {
+    if (formData.userType === nextType) return;
+
+    if (nextType === "coach") {
+      setHeightFeet("");
+      setHeightInches("");
+      setVerticalInches("");
+      setWeightLbs("");
+      setFormData((prev) => ({
+        ...prev,
+        userType: nextType,
+        height: "",
+        vertical: "",
+        weight: "",
+        position: "",
+        division: prev.division || "",
+      }));
+    } else {
+      const heightParts = parseHeightValue(formData.height);
+      const verticalValue = parseNumericValue(formData.vertical);
+      const weightValue = parseNumericValue(formData.weight);
+      setHeightFeet(heightParts.feet);
+      setHeightInches(heightParts.inches);
+      setVerticalInches(verticalValue);
+      setWeightLbs(weightValue);
+      setFormData((prev) => ({
+        ...prev,
+        userType: nextType,
+      }));
+    }
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -95,6 +134,9 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
             vertical: data.vertical || "",
             weight: data.weight || "",
             photoURL: data.photoURL || "",
+            userType: (data.userType as "athlete" | "coach") || "athlete",
+        division: data.division || "",
+        coachMessage: data.coachMessage || "",
           });
           setHeightFeet(heightParts.feet);
           setHeightInches(heightParts.inches);
@@ -108,6 +150,10 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
           setHeightInches("");
           setVerticalInches("");
           setWeightLbs("");
+          setFormData((prev) => ({
+            ...prev,
+            userType: "athlete",
+          }));
         }
       } catch (error) {
         console.error("Error fetching profile:", error);
@@ -187,17 +233,21 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         photoURL = await uploadToCloudinary(photoFile);
       }
 
+      const isCoachSubmit = formData.userType === "coach";
+
       const feetValue = heightFeet ? parseInt(heightFeet, 10) : 0;
       const inchValue = heightInches ? parseInt(heightInches, 10) : 0;
       const verticalValue = verticalInches ? parseInt(verticalInches, 10) : 0;
       const weightValue = weightLbs ? parseInt(weightLbs, 10) : 0;
 
       const normalizedHeight =
-        feetValue || inchValue ? `${feetValue}'${inchValue}"` : "";
+        isCoachSubmit || (!feetValue && !inchValue)
+          ? ""
+          : `${feetValue}'${inchValue}"`;
       const normalizedVertical =
-        verticalValue ? `${verticalValue}"` : "";
+        isCoachSubmit || !verticalValue ? "" : `${verticalValue}"`;
       const normalizedWeight =
-        weightValue ? `${weightValue} lbs` : "";
+        isCoachSubmit || !weightValue ? "" : `${weightValue} lbs`;
 
       // Save profile using setDoc with merge: true (creates or updates)
       // Store username in lowercase for case-insensitive searches
@@ -211,6 +261,9 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
           height: normalizedHeight,
           vertical: normalizedVertical,
           weight: normalizedWeight,
+          userType: formData.userType,
+        division: formData.division || "",
+        coachMessage: isCoachSubmit ? formData.coachMessage?.trim() || "" : formData.coachMessage?.trim() || formData.bio || "",
         },
         { merge: true }
       );
@@ -222,6 +275,8 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         height: normalizedHeight,
         vertical: normalizedVertical,
         weight: normalizedWeight,
+        division: formData.division || "",
+        coachMessage: formData.coachMessage || "",
       });
       setPhotoPreview(null);
       setPhotoFile(null);
@@ -352,62 +407,91 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
               />
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4 sm:items-end">
-            <div className="sm:max-w-[120px]">
-              <label className="mb-2 block text-sm font-medium text-[#111827]">Age *</label>
-              <input
-                type="number"
-                value={formData.age}
-                onChange={(e) => setFormData({ ...formData, age: parseInt(e.target.value) || 17 })}
-                required
-                min="13"
-                max="19"
-                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
-                inputMode="numeric"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="mb-2 block text-sm font-medium text-[#111827]">Height *</label>
-              <div className="flex gap-3">
-                <div className="flex-1">
-                  <div className="relative">
-                    <input
-                      type="number"
-                      min={4}
-                      max={7}
-                      value={heightFeet}
-                      onChange={(e) => setHeightFeet(e.target.value)}
-                      required
-                      placeholder="Feet"
-                      className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 pr-12 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
-                    />
-                    <span className="absolute inset-y-0 right-4 flex items-center text-sm text-[#6B7280]">ft</span>
+          {!isCoach && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4 sm:items-end">
+              <div className="sm:max-w-[120px]">
+                <label className="mb-2 block text-sm font-medium text-[#111827]">Age *</label>
+                <input
+                  type="number"
+                  value={formData.age}
+                  onChange={(e) => setFormData({ ...formData, age: parseInt(e.target.value) || 17 })}
+                  required
+                  min="13"
+                  max="19"
+                  className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+                  inputMode="numeric"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-2 block text-sm font-medium text-[#111827]">Height *</label>
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min={4}
+                        max={7}
+                        value={heightFeet}
+                        onChange={(e) => setHeightFeet(e.target.value)}
+                        required
+                        placeholder="Feet"
+                        className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 pr-12 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+                      />
+                      <span className="absolute inset-y-0 right-4 flex items-center text-sm text-[#6B7280]">ft</span>
+                    </div>
                   </div>
-                </div>
-                <div className="flex-1">
-                  <div className="relative">
-                    <input
-                      type="number"
-                      min={0}
-                      max={11}
-                      value={heightInches}
-                      onChange={(e) => setHeightInches(e.target.value)}
-                      required
-                      placeholder="Inches"
-                      className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 pr-12 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
-                    />
-                    <span className="absolute inset-y-0 right-4 flex items-center text-sm text-[#6B7280]">in</span>
+                  <div className="flex-1">
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min={0}
+                        max={11}
+                        value={heightInches}
+                        onChange={(e) => setHeightInches(e.target.value)}
+                        required
+                        placeholder="Inches"
+                        className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 pr-12 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+                      />
+                      <span className="absolute inset-y-0 right-4 flex items-center text-sm text-[#6B7280]">in</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
+        </div>
+      </div>
+      <div>
+        <label className="mb-2 block text-sm font-medium text-[#111827]">Account Type *</label>
+        <div className="flex gap-3">
+          {[
+            { value: "athlete", label: "Athlete" },
+            { value: "coach", label: "Coach" },
+          ].map((option) => {
+            const isActive = formData.userType === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => handleUserTypeSelect(option.value as "athlete" | "coach")}
+                className={`flex-1 rounded-xl border px-4 py-2 text-sm font-medium transition-all ${
+                  isActive
+                    ? "border-[#007AFF] bg-[#E0F2FF] text-[#0F172A]"
+                    : "border-[#E5E7EB] bg-white text-[#111827] hover:border-[#007AFF]/60"
+                }`}
+              >
+                {option.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="mb-2 block text-sm font-medium text-[#111827]">Team *</label>
+          <label className="mb-2 block text-sm font-medium text-[#111827]">
+            {isCoach ? "Team / Club *" : "Team *"}
+          </label>
           <input
             type="text"
             value={formData.team}
@@ -419,7 +503,9 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-medium text-[#111827]">City *</label>
+          <label className="mb-2 block text-sm font-medium text-[#111827]">
+            {isCoach ? "Region *" : "City *"}
+          </label>
           <input
             type="text"
             value={formData.city}
@@ -431,6 +517,19 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         </div>
       </div>
 
+      {isCoach && (
+        <div>
+          <label className="mb-2 block text-sm font-medium text-[#111827]">Division</label>
+          <input
+            type="text"
+            value={formData.division}
+            onChange={(e) => setFormData({ ...formData, division: e.target.value })}
+            placeholder="e.g., 17U Boys"
+            className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+          />
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="mb-2 block text-sm font-medium text-[#111827]">Sport *</label>
@@ -441,71 +540,95 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
           <input type="hidden" name="sport" value="Volleyball" />
         </div>
 
-        <div>
-          <label className="mb-2 block text-sm font-medium text-[#111827]">Position *</label>
-          <select
-            value={formData.position}
-            onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-            required
-            className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
-          >
-            <option value="">Select position</option>
-            <option value="Setter">Setter</option>
-            <option value="Outside Hitter">Outside Hitter</option>
-            <option value="Opposite">Opposite</option>
-            <option value="Middle Blocker">Middle Blocker</option>
-            <option value="Libero">Libero</option>
-          </select>
-        </div>
+        {!isCoach && (
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[#111827]">Position *</label>
+            <select
+              value={formData.position}
+              onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+              required
+              className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+            >
+              <option value="">Select position</option>
+              <option value="Setter">Setter</option>
+              <option value="Outside Hitter">Outside Hitter</option>
+              <option value="Opposite">Opposite</option>
+              <option value="Middle Blocker">Middle Blocker</option>
+              <option value="Libero">Libero</option>
+            </select>
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label className="mb-2 block text-sm font-medium text-[#111827]">Vertical *</label>
-          <div className="relative">
-            <input
-              type="number"
-              min={0}
-              max={80}
-              value={verticalInches}
-              onChange={(e) => setVerticalInches(e.target.value)}
-              required
-              placeholder="Inches"
-              className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 pr-12 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
-            />
-            <span className="absolute inset-y-0 right-4 flex items-center text-sm text-[#6B7280]">in</span>
+      {!isCoach && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[#111827]">Vertical *</label>
+            <div className="relative">
+              <input
+                type="number"
+                min={0}
+                max={80}
+                value={verticalInches}
+                onChange={(e) => setVerticalInches(e.target.value)}
+                required
+                placeholder="Inches"
+                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 pr-12 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+              />
+              <span className="absolute inset-y-0 right-4 flex items-center text-sm text-[#6B7280]">in</span>
+            </div>
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[#111827]">Weight *</label>
+            <div className="relative">
+              <input
+                type="number"
+                min={50}
+                max={400}
+                value={weightLbs}
+                onChange={(e) => setWeightLbs(e.target.value)}
+                required
+                placeholder="Pounds"
+                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 pr-14 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+              />
+              <span className="absolute inset-y-0 right-4 flex items-center text-sm text-[#6B7280]">lbs</span>
+            </div>
           </div>
         </div>
-        <div>
-          <label className="mb-2 block text-sm font-medium text-[#111827]">Weight *</label>
-          <div className="relative">
-            <input
-              type="number"
-              min={50}
-              max={400}
-              value={weightLbs}
-              onChange={(e) => setWeightLbs(e.target.value)}
-              required
-              placeholder="Pounds"
-              className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 pr-14 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
-            />
-            <span className="absolute inset-y-0 right-4 flex items-center text-sm text-[#6B7280]">lbs</span>
-          </div>
-        </div>
-      </div>
+      )}
 
-      <div>
-        <label className="mb-2 block text-sm font-medium text-[#111827]">Bio</label>
-        <textarea
-          value={formData.bio}
-          onChange={(e) => setFormData({ ...formData, bio: e.target.value.slice(0, 500) })}
-          rows={4}
-          maxLength={500}
-          placeholder="Tell us about yourself... (e.g., OVA 17U | Working on serve receive)"
-          className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 resize-none"
-        />
-        <p className="mt-2 text-xs text-[#6B7280]">{formData.bio.length}/500 characters</p>
-      </div>
+      {!isCoach ? (
+        <div>
+          <label className="mb-2 block text-sm font-medium text-[#111827]">Bio</label>
+          <textarea
+            value={formData.bio}
+            onChange={(e) => setFormData({ ...formData, bio: e.target.value.slice(0, 500) })}
+            rows={4}
+            maxLength={500}
+            placeholder="Tell us about yourself... (e.g., OVA 17U | Working on serve receive)"
+            className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 resize-none"
+          />
+          <p className="mt-2 text-xs text-[#6B7280]">{formData.bio.length}/500 characters</p>
+        </div>
+      ) : (
+        <div>
+          <label className="mb-2 block text-sm font-medium text-[#111827]">Message to Athletes</label>
+          <textarea
+            value={formData.coachMessage || ""}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                coachMessage: e.target.value.slice(0, 500),
+              })
+            }
+            rows={4}
+            maxLength={500}
+            placeholder='e.g., "Always looking for hard working setters."'
+            className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 resize-none"
+          />
+          <p className="mt-2 text-xs text-[#6B7280]">{formData.coachMessage?.length || 0}/500 characters</p>
+        </div>
+      )}
 
       <motion.button
         type="submit"

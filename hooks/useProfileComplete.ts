@@ -33,17 +33,20 @@ export function useProfileComplete() {
         }
 
         const data = snapshot.data();
+        const isCoach = data.userType === "coach";
         const hasRequiredFields =
           data.username &&
           data.name &&
-          data.team &&
-          data.age &&
-          data.city &&
-          data.position &&
-          data.sport &&
-          data.height &&
-          data.vertical &&
-          data.weight;
+          data.userType &&
+          (isCoach
+            ? data.team && data.city
+            : data.team &&
+              data.city &&
+              data.position &&
+              data.sport &&
+              data.height &&
+              data.vertical &&
+              data.weight);
 
         setIsComplete(!!hasRequiredFields);
         setLoading(false);

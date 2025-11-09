@@ -5,11 +5,12 @@ import { usePathname } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
 import { useProfileComplete } from "@/hooks/useProfileComplete";
 import { signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { HiHome, HiSearch, HiChat, HiUser, HiLogout, HiInformationCircle } from "react-icons/hi";
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { doc, onSnapshot } from "firebase/firestore";
 
 export default function Navbar() {
   const { user, loading } = useUser();
@@ -18,6 +19,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const [showMenu, setShowMenu] = useState(false);
   const [showProfileReminder, setShowProfileReminder] = useState(false);
+  const [userType, setUserType] = useState<"athlete" | "coach" | "">("");
   const reminderTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const triggerProfileReminder = () => {
@@ -38,6 +40,26 @@ export default function Navbar() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setUserType("");
+      return;
+    }
+
+    const unsub = onSnapshot(
+      doc(db, "users", user.uid),
+      (snapshot) => {
+        const data = snapshot.data();
+        setUserType((data?.userType as "athlete" | "coach") || "athlete");
+      },
+      () => {
+        setUserType("athlete");
+      }
+    );
+
+    return () => unsub();
+  }, [user]);
 
   useEffect(() => {
     if (isComplete) {
@@ -79,12 +101,22 @@ export default function Navbar() {
     return null;
   }
 
-  const navItems = [
-    { href: "/home", label: "Home", icon: HiHome },
-    { href: "/explore", label: "Explore", icon: HiSearch },
-    { href: "/messages", label: "Messages", icon: HiChat },
-    { href: "/profile", label: "Profile", icon: HiUser },
-  ];
+  const isCoach = userType === "coach";
+  const navItems = isCoach
+    ? [
+        { href: "/home", label: "Home", icon: HiHome },
+        { href: "/coach", label: "Coach", icon: HiInformationCircle },
+        { href: "/messages", label: "Messages", icon: HiChat },
+        { href: "/profile", label: "Profile", icon: HiUser },
+      ]
+    : [
+        { href: "/home", label: "Home", icon: HiHome },
+        { href: "/explore", label: "Explore", icon: HiSearch },
+        { href: "/messages", label: "Messages", icon: HiChat },
+        { href: "/profile", label: "Profile", icon: HiUser },
+      ];
+
+  const primaryRoute = "/home";
 
   return (
     <>
@@ -93,8 +125,8 @@ export default function Navbar() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="flex h-16 items-center justify-between">
             <Link 
-              href="/home" 
-              onClick={(event) => handleProtectedNavigation(event, "/home")}
+              href={primaryRoute} 
+              onClick={(event) => handleProtectedNavigation(event, primaryRoute)}
               className="text-xl font-semibold text-[#111827] hover:opacity-80 transition-opacity"
             >
               LockerLink
@@ -174,8 +206,8 @@ export default function Navbar() {
       <div className="md:hidden sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-[#E5E7EB]">
         <div className="flex h-14 items-center justify-between px-4">
           <Link 
-            href="/home" 
-            onClick={(event) => handleProtectedNavigation(event, "/home")}
+            href={primaryRoute} 
+            onClick={(event) => handleProtectedNavigation(event, primaryRoute)}
             className="text-lg font-semibold text-[#111827]"
           >
             LockerLink

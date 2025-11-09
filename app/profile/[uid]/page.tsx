@@ -25,11 +25,28 @@ interface Post {
   commentsCount?: number;
 }
 
+interface ViewedProfile {
+  name?: string;
+  team?: string;
+  sport?: string;
+  city?: string;
+  bio?: string;
+  photoURL?: string;
+  age?: number;
+  position?: string;
+  height?: string;
+  vertical?: string;
+  weight?: string;
+  division?: string;
+  coachMessage?: string;
+  userType?: "athlete" | "coach";
+}
+
 export default function UserProfilePage({ params }: { params: Promise<{ uid: string }> }) {
   const { uid } = use(params);
   const { user: currentUser, loading } = useUser();
   const router = useRouter();
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<ViewedProfile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
 
   useEffect(() => {
@@ -43,7 +60,11 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
       try {
         const userDoc = await getDoc(doc(db, "users", uid));
         if (userDoc.exists()) {
-          setProfile(userDoc.data());
+          const data = userDoc.data() as ViewedProfile;
+          setProfile({
+            ...data,
+            userType: (data.userType as "athlete" | "coach") || "athlete",
+          });
         }
       } catch (error) {
         console.error("Error fetching profile:", error);
@@ -140,6 +161,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
   }
 
   const isOwnProfile = currentUser?.uid === uid;
+  const isCoachProfile = profile?.userType === "coach";
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] pb-20 md:pb-0">
@@ -157,7 +179,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
                 {profile.photoURL ? (
                   <Image
                     src={profile.photoURL}
-                    alt={profile.name}
+                    alt={profile.name || "Coach"}
                     width={128}
                     height={128}
                     className="h-full w-full object-cover"
@@ -197,51 +219,77 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
                 {profile.team && (
                   <p className="text-lg sm:text-xl text-[#6B7280] mt-2">{profile.team}</p>
                 )}
+                {profile.userType && (
+                  <div className="mt-3 inline-flex items-center gap-2">
+                    <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-600">
+                      {profile.userType === "coach" ? "Coach" : "Athlete"}
+                    </span>
+                  </div>
+                )}
               </div>
-
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 pt-4 sm:pt-6 border-t border-[#E5E7EB]">
-                {profile.age && (
+                {!isCoachProfile && profile.age && (
                   <div className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
                     <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">Age</p>
                     <p className="text-xl font-semibold text-[#111827]">{profile.age}</p>
                   </div>
                 )}
-                {profile.height && (
+                {!isCoachProfile && profile.height && (
                   <div className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
                     <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">Height</p>
                     <p className="text-xl font-semibold text-[#111827]">{formatHeight(profile.height)}</p>
                   </div>
                 )}
-                {profile.vertical && (
+                {!isCoachProfile && profile.vertical && (
                   <div className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
                     <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">Vertical</p>
                     <p className="text-xl font-semibold text-[#111827]">{formatVertical(profile.vertical)}</p>
                   </div>
                 )}
-                {profile.weight && (
+                {!isCoachProfile && profile.weight && (
                   <div className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
                     <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">Weight</p>
                     <p className="text-xl font-semibold text-[#111827]">{formatWeight(profile.weight)}</p>
                   </div>
                 )}
-                {profile.position && (
+                {!isCoachProfile && profile.position && (
                   <div className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
                     <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">Position</p>
                     <p className="text-xl font-semibold text-[#111827]">{profile.position}</p>
                   </div>
                 )}
-                {profile.city && (
+                {!isCoachProfile && profile.city && (
                   <div className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
                     <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">City</p>
                     <p className="text-xl font-semibold text-[#111827]">{profile.city}</p>
                   </div>
                 )}
+                {isCoachProfile && profile.city && (
+                  <div className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
+                    <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">Region</p>
+                    <p className="text-xl font-semibold text-[#111827]">{profile.city}</p>
+                  </div>
+                )}
+                {isCoachProfile && profile.division && (
+                  <div className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
+                    <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">Division</p>
+                    <p className="text-xl font-semibold text-[#111827]">{profile.division}</p>
+                  </div>
+                )}
               </div>
 
-              {profile.bio && (
+              {!isCoachProfile && profile.bio && (
                 <div className="pt-6 border-t border-[#E5E7EB]">
                   <p className="text-sm font-semibold text-[#6B7280] uppercase tracking-wide mb-3">About</p>
                   <p className="text-[#111827] leading-relaxed">{profile.bio}</p>
+                </div>
+              )}
+              {isCoachProfile && profile.coachMessage && (
+                <div className="pt-6 border-t border-[#E5E7EB]">
+                  <p className="text-sm font-semibold text-[#2563EB] uppercase tracking-wide mb-3">
+                    Message to Athletes
+                  </p>
+                  <p className="text-[#1E3A8A] leading-relaxed">{profile.coachMessage}</p>
                 </div>
               )}
             </div>

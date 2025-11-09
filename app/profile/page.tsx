@@ -28,6 +28,9 @@ interface UserProfile {
   weight?: string;
   photoURL?: string;
   bio?: string;
+  userType?: "athlete" | "coach";
+  division?: string;
+  coachMessage?: string;
 }
 
 interface Highlight {
@@ -155,6 +158,9 @@ export default function ProfilePage() {
           weight: data.weight,
           photoURL: data.photoURL,
           bio: data.bio,
+          userType: (data.userType as "athlete" | "coach") || "athlete",
+          division: data.division,
+          coachMessage: data.coachMessage,
         });
       }
 
@@ -261,28 +267,37 @@ export default function ProfilePage() {
     }
   };
 
-  const stats = [
-    {
-      label: "Height",
-      value: formatHeight(userProfile?.height),
-      icon: TrendingUp,
-    },
-    {
-      label: "Vertical",
-      value: formatVertical(userProfile?.vertical),
-      icon: Sparkles,
-    },
-    {
-      label: "Weight",
-      value: formatWeight(userProfile?.weight),
-      icon: Trophy,
-    },
-    {
-      label: "Highlights",
-      value: highlights.length.toString(),
-      icon: Play,
-    },
-  ];
+  const isCoachProfile = userProfile?.userType === "coach";
+  const stats = isCoachProfile
+    ? [
+        {
+          label: "Highlights",
+          value: highlights.length.toString(),
+          icon: Play,
+        },
+      ]
+    : [
+        {
+          label: "Height",
+          value: formatHeight(userProfile?.height),
+          icon: TrendingUp,
+        },
+        {
+          label: "Vertical",
+          value: formatVertical(userProfile?.vertical),
+          icon: Sparkles,
+        },
+        {
+          label: "Weight",
+          value: formatWeight(userProfile?.weight),
+          icon: Trophy,
+        },
+        {
+          label: "Highlights",
+          value: highlights.length.toString(),
+          icon: Play,
+        },
+      ];
 
   if (loading || profileLoading || profileStatusLoading) {
     return (
@@ -413,9 +428,14 @@ export default function ProfilePage() {
                     {userProfile.position}
                   </div>
                 )}
-                {userProfile?.age && (
+            {userProfile?.age && !isCoachProfile && (
                   <div className="bg-blue-50 text-[#3B82F6] px-3 py-1 rounded-full text-sm font-medium border-0">
                     {userProfile.age} years old
+                  </div>
+                )}
+                {userProfile?.userType && (
+                  <div className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-sm font-medium border border-emerald-100">
+                    {userProfile.userType === "coach" ? "Coach" : "Athlete"}
                   </div>
                 )}
               </div>
@@ -423,15 +443,43 @@ export default function ProfilePage() {
           </div>
 
           {/* Bio */}
-          {userProfile?.bio && (
+          {!isCoachProfile && userProfile?.bio && (
             <p className="text-slate-700 mb-4 leading-relaxed">{userProfile.bio}</p>
           )}
 
           {/* Team */}
           {userProfile?.team && (
             <div className="bg-slate-50 rounded-2xl p-4 mb-4">
-              <p className="text-slate-500 text-sm mb-1">Current Team</p>
+              <p className="text-slate-500 text-sm mb-1">
+                {isCoachProfile ? "Team / Club" : "Current Team"}
+              </p>
               <p className="text-[#0F172A] font-medium">{userProfile.team}</p>
+            </div>
+          )}
+          {isCoachProfile && userProfile?.division && (
+            <div className="bg-slate-50 rounded-2xl p-4 mb-4">
+              <p className="text-slate-500 text-sm mb-1">Division</p>
+              <p className="text-[#0F172A] font-medium">{userProfile.division}</p>
+            </div>
+          )}
+          {isCoachProfile && userProfile?.city && (
+            <div className="bg-slate-50 rounded-2xl p-4 mb-4">
+              <p className="text-slate-500 text-sm mb-1">Region</p>
+              <p className="text-[#0F172A] font-medium">{userProfile.city}</p>
+            </div>
+          )}
+          {isCoachProfile && userProfile?.coachMessage && (
+            <div className="bg-gradient-to-br from-[#EFF6FF] via-white to-white border border-[#DBEAFE] rounded-3xl p-6 mb-4">
+              <p className="text-sm font-semibold text-[#2563EB] uppercase tracking-wide mb-2">
+                Message to Athletes
+              </p>
+              <p className="text-[#1E3A8A] leading-relaxed">{userProfile.coachMessage}</p>
+            </div>
+          )}
+          {!isCoachProfile && userProfile?.city && (
+            <div className="bg-slate-50 rounded-2xl p-4 mb-4">
+              <p className="text-slate-500 text-sm mb-1">City</p>
+              <p className="text-[#0F172A] font-medium">{userProfile.city}</p>
             </div>
           )}
 
