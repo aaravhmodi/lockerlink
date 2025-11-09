@@ -27,6 +27,23 @@ interface ProfileFormProps {
   onSave?: () => Promise<void> | void;
 }
 
+const parseHeightValue = (value?: string) => {
+  if (!value) {
+    return { feet: "", inches: "" };
+  }
+  const match = value.match(/(?:(\d+)\s*(?:ft|feet|'))?\s*(?:(\d+)\s*(?:in|\"|inch))?/i);
+  return {
+    feet: match?.[1] ?? "",
+    inches: match?.[2] ?? "",
+  };
+};
+
+const parseNumericValue = (value?: string) => {
+  if (!value) return "";
+  const match = value.match(/(\d+(?:\.\d+)?)/);
+  return match ? match[1] : "";
+};
+
 export default function ProfileForm({ onSave }: ProfileFormProps) {
   const { user } = useUser();
   const [loading, setLoading] = useState(true);
@@ -49,6 +66,10 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [usernameError, setUsernameError] = useState("");
   const [checkingUsername, setCheckingUsername] = useState(false);
+  const [heightFeet, setHeightFeet] = useState<string>("");
+  const [heightInches, setHeightInches] = useState<string>("");
+  const [verticalInches, setVerticalInches] = useState<string>("");
+  const [weightLbs, setWeightLbs] = useState<string>("");
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -58,6 +79,9 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         const userDoc = await getDoc(doc(db, "users", user.uid));
         if (userDoc.exists()) {
           const data = userDoc.data() as UserProfile;
+          const heightParts = parseHeightValue(data.height);
+          const verticalValue = parseNumericValue(data.vertical);
+          const weightValue = parseNumericValue(data.weight);
           setFormData({
             username: data.username || "",
             name: data.name || "",
@@ -72,9 +96,18 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
             weight: data.weight || "",
             photoURL: data.photoURL || "",
           });
+          setHeightFeet(heightParts.feet);
+          setHeightInches(heightParts.inches);
+          setVerticalInches(verticalValue);
+          setWeightLbs(weightValue);
           if (data.photoURL) {
             setPhotoPreview(null);
           }
+        } else {
+          setHeightFeet("");
+          setHeightInches("");
+          setVerticalInches("");
+          setWeightLbs("");
         }
       } catch (error) {
         console.error("Error fetching profile:", error);
@@ -154,6 +187,18 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         photoURL = await uploadToCloudinary(photoFile);
       }
 
+      const feetValue = heightFeet ? parseInt(heightFeet, 10) : 0;
+      const inchValue = heightInches ? parseInt(heightInches, 10) : 0;
+      const verticalValue = verticalInches ? parseInt(verticalInches, 10) : 0;
+      const weightValue = weightLbs ? parseInt(weightLbs, 10) : 0;
+
+      const normalizedHeight =
+        feetValue || inchValue ? `${feetValue}'${inchValue}"` : "";
+      const normalizedVertical =
+        verticalValue ? `${verticalValue}"` : "";
+      const normalizedWeight =
+        weightValue ? `${weightValue} lbs` : "";
+
       // Save profile using setDoc with merge: true (creates or updates)
       // Store username in lowercase for case-insensitive searches
       await setDoc(
@@ -163,12 +208,21 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
           sport: "Volleyball",
           username: formData.username.toLowerCase().trim(),
           photoURL,
+          height: normalizedHeight,
+          vertical: normalizedVertical,
+          weight: normalizedWeight,
         },
         { merge: true }
       );
 
       // Update local state
-      setFormData({ ...formData, photoURL });
+      setFormData({
+        ...formData,
+        photoURL,
+        height: normalizedHeight,
+        vertical: normalizedVertical,
+        weight: normalizedWeight,
+      });
       setPhotoPreview(null);
       setPhotoFile(null);
       
@@ -314,14 +368,38 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
             </div>
             <div>
               <label className="mb-2 block text-sm font-medium text-[#111827]">Height *</label>
-              <input
-                type="text"
-                value={formData.height}
-                onChange={(e) => setFormData({ ...formData, height: e.target.value })}
-                required
-                placeholder={`e.g., 6'2"`}
-                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
-              />
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min={4}
+                      max={7}
+                      value={heightFeet}
+                      onChange={(e) => setHeightFeet(e.target.value)}
+                      required
+                      placeholder="Feet"
+                      className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 pr-12 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+                    />
+                    <span className="absolute inset-y-0 right-4 flex items-center text-sm text-[#6B7280]">ft</span>
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min={0}
+                      max={11}
+                      value={heightInches}
+                      onChange={(e) => setHeightInches(e.target.value)}
+                      required
+                      placeholder="Inches"
+                      className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 pr-12 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+                    />
+                    <span className="absolute inset-y-0 right-4 flex items-center text-sm text-[#6B7280]">in</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -384,25 +462,35 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="mb-2 block text-sm font-medium text-[#111827]">Vertical *</label>
-          <input
-            type="text"
-            value={formData.vertical}
-            onChange={(e) => setFormData({ ...formData, vertical: e.target.value })}
-            required
-            placeholder='e.g., 30"'
-            className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
-          />
+          <div className="relative">
+            <input
+              type="number"
+              min={0}
+              max={80}
+              value={verticalInches}
+              onChange={(e) => setVerticalInches(e.target.value)}
+              required
+              placeholder="Inches"
+              className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 pr-12 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+            />
+            <span className="absolute inset-y-0 right-4 flex items-center text-sm text-[#6B7280]">in</span>
+          </div>
         </div>
         <div>
           <label className="mb-2 block text-sm font-medium text-[#111827]">Weight *</label>
-          <input
-            type="text"
-            value={formData.weight}
-            onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-            required
-            placeholder="e.g., 165 lbs"
-            className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
-          />
+          <div className="relative">
+            <input
+              type="number"
+              min={50}
+              max={400}
+              value={weightLbs}
+              onChange={(e) => setWeightLbs(e.target.value)}
+              required
+              placeholder="Pounds"
+              className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 pr-14 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+            />
+            <span className="absolute inset-y-0 right-4 flex items-center text-sm text-[#6B7280]">lbs</span>
+          </div>
         </div>
       </div>
 
