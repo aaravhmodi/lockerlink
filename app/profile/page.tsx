@@ -423,9 +423,9 @@ export default function ProfilePage() {
       <div className="bg-gradient-to-br from-[#3B82F6] to-[#2563EB] h-32" />
 
       {/* Profile info */}
-      <div className="max-w-2xl mx-auto px-4 -mt-16 mb-6">
-        <div className="bg-white rounded-3xl p-6 shadow-lg relative">
-          <div className="flex items-start gap-4 mb-4 md:pr-64">
+      <div className="max-w-2xl mx-auto px-4 -mt-16 mb-10">
+        <div className="bg-white rounded-3xl p-6 sm:p-7 shadow-lg relative space-y-5">
+          <div className="flex items-start gap-4">
             {/* Avatar */}
             <div className="w-24 h-24 bg-gradient-to-br from-[#FACC15] to-[#F59E0B] rounded-2xl flex items-center justify-center -mt-12 shadow-xl overflow-hidden">
               {userProfile?.photoURL ? (
@@ -444,12 +444,14 @@ export default function ProfilePage() {
             </div>
             
             <div className="flex-1 pt-2">
-              <div className="flex items-center gap-2 mb-2">
-                <h1 className="text-2xl font-semibold text-[#0F172A]">{userProfile?.name || "Player"}</h1>
+              <div className="flex items-center gap-2 mb-1.5">
+                <h1 className="text-2xl sm:text-[26px] font-semibold text-[#0F172A] leading-tight">
+                  {userProfile?.name || "Player"}
+                </h1>
                 <Award className="w-5 h-5 text-[#3B82F6]" />
               </div>
               {userProfile?.username && (
-                <p className="text-slate-500 text-sm mb-2">@{userProfile.username}</p>
+                <p className="text-slate-500 text-sm mb-3">@{userProfile.username}</p>
               )}
               {userProfile?.city && (
                 <div className="flex items-center gap-2 text-slate-600 mb-3">
@@ -479,24 +481,28 @@ export default function ProfilePage() {
 
           {/* Bio */}
           {!isCoachProfile && userProfile?.bio && (
-            <p className="text-slate-700 mb-4 leading-relaxed">{userProfile.bio}</p>
+            <p className="text-slate-700 leading-relaxed">{userProfile.bio}</p>
           )}
 
           {/* Profile details */}
-          {!isCoachProfile && userProfile?.team && (
-            <div className="bg-slate-50 rounded-2xl p-4 mb-4">
-              <p className="text-slate-500 text-sm mb-1">Current Team</p>
-              <p className="text-[#0F172A] font-medium">{userProfile.team}</p>
-            </div>
-          )}
-          {!isCoachProfile && userProfile?.city && (
-            <div className="bg-slate-50 rounded-2xl p-4 mb-4">
-              <p className="text-slate-500 text-sm mb-1">City</p>
-              <p className="text-[#0F172A] font-medium">{userProfile.city}</p>
+          {!isCoachProfile && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {userProfile?.team && (
+                <div className="bg-slate-50 rounded-2xl p-4">
+                  <p className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-1">Current Team</p>
+                  <p className="text-[#0F172A] font-medium">{userProfile.team}</p>
+                </div>
+              )}
+              {userProfile?.city && (
+                <div className="bg-slate-50 rounded-2xl p-4">
+                  <p className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-1">City</p>
+                  <p className="text-[#0F172A] font-medium">{userProfile.city}</p>
+                </div>
+              )}
             </div>
           )}
           {isCoachProfile && coachInfoCards.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {coachInfoCards.map((card) => {
                 const Icon = card.icon;
                 return (
@@ -519,7 +525,7 @@ export default function ProfilePage() {
             </div>
           )}
           {isCoachProfile && userProfile?.coachMessage && (
-            <div className="mb-4 rounded-3xl border border-[#DBEAFE] bg-gradient-to-br from-[#EFF6FF] via-white to-white p-5 shadow-sm">
+            <div className="rounded-3xl border border-[#DBEAFE] bg-gradient-to-br from-[#EFF6FF] via-white to-white p-5 shadow-sm">
               <div className="mb-3 flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#2563EB]/15 text-[#2563EB] text-base font-semibold">
                   ✉️
@@ -534,7 +540,7 @@ export default function ProfilePage() {
 
           {/* Stats */}
           {stats.length > 0 && (
-            <div className={statsGridClass}>
+            <div className={`${statsGridClass} mt-2`}>
               {stats.map((stat) => {
                 const Icon = stat.icon;
                 return (
@@ -549,12 +555,12 @@ export default function ProfilePage() {
           )}
 
           {/* Action buttons */}
-          <div className="mt-6 flex flex-col gap-3 md:absolute md:right-6 md:top-6 md:w-60">
+          <div className="pt-3 flex flex-col gap-3 sm:flex-row sm:justify-end">
             <motion.button
               onClick={() => setShowEditForm(true)}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="flex items-center justify-center gap-2 rounded-xl bg-[#007AFF] px-4 sm:px-6 py-2.5 sm:py-3 text-white font-medium transition-all duration-200 hover:bg-[#0056CC] shadow-md hover:shadow-lg touch-manipulation min-h-[44px] text-sm sm:text-base"
+              className="flex-1 sm:flex-none sm:w-auto items-center justify-center gap-2 rounded-xl bg-[#007AFF] px-4 sm:px-6 py-2.5 sm:py-3 text-white font-medium transition-all duration-200 hover:bg-[#0056CC] shadow-md hover:shadow-lg touch-manipulation min-h-[44px] text-sm sm:text-base"
             >
               Edit Profile
             </motion.button>
@@ -562,7 +568,7 @@ export default function ProfilePage() {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="flex items-center justify-center gap-2 rounded-xl border border-[#3B82F6] bg-white px-4 sm:px-6 py-2.5 sm:py-3 text-[#3B82F6] font-medium transition-all duration-200 hover:bg-blue-50 shadow-sm hover:shadow-md touch-manipulation min-h-[44px] text-sm sm:text-base"
+                className="flex-1 sm:flex-none sm:w-auto items-center justify-center gap-2 rounded-xl border border-[#3B82F6] bg-white px-4 sm:px-6 py-2.5 sm:py-3 text-[#3B82F6] font-medium transition-all duration-200 hover:bg-blue-50 shadow-sm hover:shadow-md touch-manipulation min-h-[44px] text-sm sm:text-base"
               >
                 {isCoachProfile ? "Open Coach Dashboard" : "Find Match"}
               </motion.button>
@@ -571,7 +577,7 @@ export default function ProfilePage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setShowManagePosts(true)}
-              className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 sm:px-6 py-2.5 sm:py-3 text-slate-600 font-medium transition-all duration-200 hover:bg-slate-50 shadow-sm hover:shadow-md touch-manipulation min-h-[44px] text-sm sm:text-base"
+              className="flex-1 sm:flex-none sm:w-auto items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 sm:px-6 py-2.5 sm:py-3 text-slate-600 font-medium transition-all duration-200 hover:bg-slate-50 shadow-sm hover:shadow-md touch-manipulation min-h-[44px] text-sm sm:text-base"
             >
               Manage Posts
             </motion.button>
