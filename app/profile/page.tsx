@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
 import { useProfileComplete } from "@/hooks/useProfileComplete";
-import { doc, getDoc, collection, query, where, orderBy, getDocs, addDoc, serverTimestamp, onSnapshot, limit } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, orderBy, getDocs, addDoc, serverTimestamp, onSnapshot, limit, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Navbar from "@/components/Navbar";
 import ProfileForm from "@/components/ProfileForm";
@@ -20,6 +20,7 @@ import {
   Sparkles,
   Trophy,
   Users,
+  Trash2,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -92,6 +93,7 @@ export default function ProfilePage() {
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [profileWasIncomplete, setProfileWasIncomplete] = useState(false);
   const [submitHighlightToChallenge, setSubmitHighlightToChallenge] = useState(false);
+  const [deletingHighlightId, setDeletingHighlightId] = useState<string | null>(null);
 
   // Auto-show edit form if profile is incomplete
   useEffect(() => {
@@ -222,6 +224,26 @@ export default function ProfilePage() {
       console.error("Error loading profile:", error);
     } finally {
       setProfileLoading(false);
+    }
+  };
+
+  const handleDeleteHighlight = async (highlightId: string) => {
+    if (!user || deletingHighlightId) return;
+
+    const confirmDelete = window.confirm("Delete this highlight? This can’t be undone.");
+    if (!confirmDelete) {
+      return;
+    }
+
+    setDeletingHighlightId(highlightId);
+    try {
+      await deleteDoc(doc(db, "highlights", highlightId));
+      setHighlights((prev) => prev.filter((highlight) => highlight.id !== highlightId));
+    } catch (error) {
+      console.error("Error deleting highlight:", error);
+      alert("Failed to delete highlight. Please try again.");
+    } finally {
+      setDeletingHighlightId(null);
     }
   };
 
@@ -603,54 +625,71 @@ export default function ProfilePage() {
           </motion.button>
         </div>
         {highlights.length > 0 ? (
-          <div className="grid grid-cols-3 gap-2">
-            {highlights.map((highlight, index) => (
-              <Link key={highlight.id} href={`/highlights/${highlight.id}`}>
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="relative aspect-square bg-slate-100 rounded-xl overflow-hidden group cursor-pointer"
-                >
-                {highlight.thumbnailURL ? (
-                  <Image
-                    src={highlight.thumbnailURL}
-                    alt={highlight.title}
-                    fill
-                    className="object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center">
-                    <Play className="w-8 h-8 text-slate-400" />
-                  </div>
-                )}
-                {highlight.submittedToChallenge && (
-                  <div className="absolute top-2 right-2 rounded-full bg-[#FACC15] text-[#0F172A] px-2 py-1 text-xs font-semibold shadow">
-                    Challenge
-                  </div>
-                )}
-                  
-                  {/* Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                  
-                  {/* Play button on hover */}
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center">
-                      <Play className="w-6 h-6 text-[#3B82F6] ml-1" fill="currentColor" />
+          <div className="grid grid-cols-3 gap-3">
+            {highlights.map((highlight, index) => {
+              const isDeleting = deletingHighlightId === highlight.id;
+              return (
+                <Link key={highlight.id} href={`/highlights/${highlight.id}`}>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="relative aspect-square bg-slate-100 rounded-2xl overflow-hidden group cursor-pointer"
+                  >
+                    {highlight.thumbnailURL ? (
+                      <Image
+                        src={highlight.thumbnailURL}
+                        alt={highlight.title}
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center">
+                        <Play className="w-8 h-8 text-slate-400" />
+                      </div>
+                    )}
+                    {highlight.submittedToChallenge && (
+                      <div className="absolute top-2 right-2 rounded-full bg-[#FACC15] text-[#0F172A] px-2 py-1 text-xs font-semibold shadow">
+                        Challenge
+                      </div>
+                    )}
+
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      disabled={isDeleting}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        handleDeleteHighlight(highlight.id);
+                      }}
+                      className="absolute top-2 left-2 flex items-center justify-center rounded-full bg-white/90 text-red-500 shadow-md hover:bg-red-50 transition-colors w-9 h-9 disabled:opacity-60"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </motion.button>
+                    
+                    {/* Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    
+                    {/* Play button on hover */}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center">
+                        <Play className="w-6 h-6 text-[#3B82F6] ml-1" fill="currentColor" />
+                      </div>
                     </div>
-                  </div>
-                  
-                  {/* View count */}
-                  {highlight.views && highlight.views > 0 && (
-                    <div className="absolute bottom-2 left-2 text-white text-xs bg-black/50 backdrop-blur-sm px-2 py-1 rounded-md">
-                      {highlight.views >= 1000 
-                        ? `${(highlight.views / 1000).toFixed(1)}k` 
-                        : highlight.views.toString()}
-                    </div>
-                  )}
-                </motion.div>
-              </Link>
-            ))}
+                    
+                    {/* View count */}
+                    {highlight.views && highlight.views > 0 && (
+                      <div className="absolute bottom-2 left-2 text-white text-xs bg-black/50 backdrop-blur-sm px-2 py-1 rounded-md">
+                        {highlight.views >= 1000 
+                          ? `${(highlight.views / 1000).toFixed(1)}k` 
+                          : highlight.views.toString()}
+                      </div>
+                    )}
+                  </motion.div>
+                </Link>
+              );
+            })}
           </div>
         ) : (
           <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center">
