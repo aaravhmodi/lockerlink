@@ -163,7 +163,7 @@ export default function MessagesPage() {
 
           {/* Conversations list */}
           <div className="px-4">
-            <ChatList />
+            <ChatList searchTerm={searchQuery} />
           </div>
         </div>
 

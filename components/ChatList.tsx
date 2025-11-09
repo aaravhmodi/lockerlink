@@ -27,8 +27,10 @@ interface Chat {
 }
 
 interface ChatWithUser extends Chat {
+  otherUserId: string;
   otherUserName: string;
   otherUserPhoto?: string;
+  otherUserType?: string;
 }
 
 // Helper function to format date consistently
@@ -52,7 +54,11 @@ function formatDate(timestamp: number): string {
   return `${month}/${day}/${year}`;
 }
 
-export default function ChatList() {
+interface ChatListProps {
+  searchTerm?: string;
+}
+
+export default function ChatList({ searchTerm = "" }: ChatListProps) {
   const { user } = useUser();
   const [chats, setChats] = useState<ChatWithUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,13 +87,16 @@ export default function ChatList() {
             const userData = userDoc.data();
             chatsData.push({
               ...chat,
+              otherUserId,
               otherUserName: userData?.name || "Unknown",
               otherUserPhoto: userData?.photoURL,
+              otherUserType: userData?.userType || "athlete",
             });
           } catch (error) {
             console.error("Error fetching user:", error);
             chatsData.push({
               ...chat,
+              otherUserId,
               otherUserName: "Unknown",
             });
           }
@@ -137,7 +146,17 @@ export default function ChatList() {
     );
   }
 
-  if (chats.length === 0) {
+  const filteredChats = chats.filter((chat) => {
+    if (!searchTerm.trim()) return true;
+    const term = searchTerm.toLowerCase();
+    return (
+      chat.otherUserName.toLowerCase().includes(term) ||
+      (chat.lastMessage || "").toLowerCase().includes(term) ||
+      (chat.otherUserType || "").toLowerCase().includes(term)
+    );
+  });
+
+  if (filteredChats.length === 0) {
     return (
       <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white">
         <div className="text-center">
@@ -157,7 +176,7 @@ export default function ChatList() {
         </div>
       )}
 
-      {chats.map((chat, index) => {
+      {filteredChats.map((chat, index) => {
         // Handle both number and Firestore Timestamp formats
         const timestamp = typeof chat.updatedAt === 'number' 
           ? chat.updatedAt 
@@ -175,8 +194,11 @@ export default function ChatList() {
             transition={{ delay: index * 0.05 }}
             className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
           >
-            <div className="px-4 py-4 flex items-center gap-4">
-              <Link href={`/messages/${chat.id}`} className="flex flex-1 items-center gap-4">
+            <div className="px-4 py-3 flex items-center gap-3 sm:gap-4">
+              <Link
+                href={`/messages/${chat.id}`}
+                className="flex flex-1 items-center gap-3 sm:gap-4 min-w-0 overflow-hidden rounded-2xl px-1.5 py-1"
+              >
                 {/* Avatar */}
                 <div className="relative flex-shrink-0">
                   {chat.otherUserPhoto ? (
@@ -203,11 +225,28 @@ export default function ChatList() {
 
                 {/* Message preview */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <h4 className="text-[#0F172A] truncate font-medium">{chat.otherUserName}</h4>
-                    <span className="text-xs text-slate-500 flex-shrink-0 ml-2">{formattedDate}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <h4 className="text-[#0F172A] truncate font-medium max-w-[55vw] sm:max-w-[260px]">
+                        {chat.otherUserName}
+                      </h4>
+                      {chat.otherUserType && (
+                        <span
+                          className={`flex-shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                            chat.otherUserType === "coach"
+                              ? "bg-emerald-50 border-emerald-200 text-emerald-600"
+                              : "bg-blue-50 border-blue-200 text-blue-600"
+                          }`}
+                        >
+                          {chat.otherUserType === "coach" ? "Coach" : "Athlete"}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs text-slate-500 flex-shrink-0">
+                      {formattedDate}
+                    </span>
                   </div>
-                  <p className="text-slate-600 text-sm truncate">
+                  <p className="text-slate-600 text-sm truncate mt-1">
                     {chat.lastMessage || "No messages yet"}
                   </p>
                 </div>
@@ -221,7 +260,7 @@ export default function ChatList() {
               <button
                 onClick={() => handleDeleteChat(chat.id)}
                 disabled={deletingId === chat.id}
-                className="ml-3 inline-flex items-center gap-1 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
+                className="flex-shrink-0 inline-flex items-center gap-1 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
               >
                 {deletingId === chat.id ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

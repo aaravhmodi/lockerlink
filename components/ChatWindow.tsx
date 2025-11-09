@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { HiPaperAirplane } from "react-icons/hi";
 import Image from "next/image";
 import { Trash2 } from "lucide-react";
+import Link from "next/link";
 
 type Message = {
   id: string;
@@ -54,7 +55,7 @@ export default function ChatWindow({ chatId }: ChatWindowProps) {
   const { user } = useUser();
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageText, setMessageText] = useState("");
-  const [otherUser, setOtherUser] = useState<{ name: string; photoURL?: string } | null>(null);
+  const [otherUser, setOtherUser] = useState<{ id: string; name: string; photoURL?: string; userType?: string } | null>(null);
   const [currentUserPhoto, setCurrentUserPhoto] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -83,8 +84,15 @@ export default function ChatWindow({ chatId }: ChatWindowProps) {
             if (userDoc.exists()) {
               const userData = userDoc.data();
               setOtherUser({
+                id: otherUserId,
                 name: userData.name || "Unknown",
                 photoURL: userData.photoURL,
+                userType: userData.userType || "athlete",
+              });
+            } else {
+              setOtherUser({
+                id: otherUserId,
+                name: "Unknown",
               });
             }
           }
@@ -288,9 +296,30 @@ export default function ChatWindow({ chatId }: ChatWindowProps) {
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <h2 className="text-sm font-semibold text-[#111827] truncate">{otherUser?.name || "Unknown"}</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-[#111827] truncate">{otherUser?.name || "Unknown"}</h2>
+            {otherUser?.userType && (
+              <span
+                className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                  otherUser.userType === "coach"
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-600"
+                    : "bg-blue-50 border-blue-200 text-blue-600"
+                }`}
+              >
+                {otherUser.userType === "coach" ? "Coach" : "Athlete"}
+              </span>
+            )}
+          </div>
           <p className="text-xs text-[#6B7280]">Active</p>
         </div>
+        {otherUser?.id && (
+          <Link
+            href={`/profile/${otherUser.id}`}
+            className="rounded-full border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs font-semibold text-[#0F172A] transition hover:bg-slate-50"
+          >
+            View Profile
+          </Link>
+        )}
       </div>
 
       {/* Messages Area - Instagram style */}

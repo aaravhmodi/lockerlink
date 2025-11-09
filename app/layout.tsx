@@ -15,7 +15,6 @@ export const metadata: Metadata = {
   applicationName: "LockerLink",
   icons: {
     icon: [
-      { url: "/icon-192x192.png", sizes: "192x192", type: "image/png" },
       { url: "/appicon.png", sizes: "512x512", type: "image/png" },
     ],
     apple: "/appicon.png",
