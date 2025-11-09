@@ -352,8 +352,8 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
               />
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-            <div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4 sm:items-end">
+            <div className="sm:max-w-[120px]">
               <label className="mb-2 block text-sm font-medium text-[#111827]">Age *</label>
               <input
                 type="number"
@@ -366,7 +366,7 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
                 inputMode="numeric"
               />
             </div>
-            <div>
+            <div className="sm:col-span-2">
               <label className="mb-2 block text-sm font-medium text-[#111827]">Height *</label>
               <div className="flex gap-3">
                 <div className="flex-1">
