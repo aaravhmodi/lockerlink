@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
@@ -12,7 +12,6 @@ export const metadata: Metadata = {
   title: "LockerLink - Connect with OVA Volleyball Players",
   description: "Social messaging app for OVA volleyball players",
   manifest: "/manifest.json",
-  themeColor: "#F5B342",
   applicationName: "LockerLink",
   icons: {
     icon: [
@@ -26,6 +25,10 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "LockerLink",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#F5B342",
 };
 
 export default function RootLayout({
