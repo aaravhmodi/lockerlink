@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
+import { collection, doc, getDoc, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useUser } from "@/hooks/useUser";
 import Navbar from "@/components/Navbar";
@@ -37,11 +37,15 @@ export default function CoachDashboardPage() {
       return;
     }
 
+    let unsubscribePlayers: (() => void) | null = null;
+
     const verifyRole = async () => {
       const profileSnap = await getDoc(doc(db, "users", user.uid));
       const profile = profileSnap.data();
       if (!profile || profile.userType !== "coach") {
         router.replace("/home");
+        setAuthorized(false);
+        setLoadingPlayers(false);
         return;
       }
 
@@ -51,19 +55,38 @@ export default function CoachDashboardPage() {
         collection(db, "users"),
         where("userType", "in", ["athlete", "player"])
       );
-      const snapshot = await getDocs(playersQuery);
-      const playerList: PlayerSummary[] = snapshot.docs.map((docSnap) => {
-        const data = docSnap.data() as PlayerSummary;
-        return {
-          ...data,
-          id: docSnap.id,
-        };
-      });
-      setPlayers(playerList);
-      setLoadingPlayers(false);
+
+      unsubscribePlayers = onSnapshot(
+        playersQuery,
+        (snapshot) => {
+          const playerList: PlayerSummary[] = snapshot.docs
+            .map((docSnap) => {
+              const data = docSnap.data() as PlayerSummary;
+              return {
+                ...data,
+                id: docSnap.id,
+              };
+            })
+            .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+          setPlayers(playerList);
+          setLoadingPlayers(false);
+        },
+        (error) => {
+          console.error("Error loading athletes for coaches:", error);
+          setPlayers([]);
+          setLoadingPlayers(false);
+        }
+      );
     };
 
     verifyRole();
+
+    return () => {
+      if (unsubscribePlayers) {
+        unsubscribePlayers();
+      }
+    };
   }, [user, loading, router]);
 
   if (loading) {
