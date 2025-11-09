@@ -11,6 +11,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { HiChat } from "react-icons/hi";
+import { formatHeight, formatVertical, formatWeight } from "@/utils/formatMetrics";
 
 interface Post {
   id: string;
@@ -208,19 +209,19 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
                 {profile.height && (
                   <div className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
                     <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">Height</p>
-                    <p className="text-xl font-semibold text-[#111827]">{profile.height}</p>
+                    <p className="text-xl font-semibold text-[#111827]">{formatHeight(profile.height)}</p>
                   </div>
                 )}
                 {profile.vertical && (
                   <div className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
                     <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">Vertical</p>
-                    <p className="text-xl font-semibold text-[#111827]">{profile.vertical}</p>
+                    <p className="text-xl font-semibold text-[#111827]">{formatVertical(profile.vertical)}</p>
                   </div>
                 )}
                 {profile.weight && (
                   <div className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
                     <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">Weight</p>
-                    <p className="text-xl font-semibold text-[#111827]">{profile.weight}</p>
+                    <p className="text-xl font-semibold text-[#111827]">{formatWeight(profile.weight)}</p>
                   </div>
                 )}
                 {profile.position && (

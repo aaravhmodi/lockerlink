@@ -13,6 +13,7 @@ import { Settings, MapPin, Award, Play, Upload, CheckCircle2, TrendingUp, Sparkl
 import Image from "next/image";
 import Link from "next/link";
 import { uploadImageToCloudinary, uploadVideoToCloudinary } from "@/utils/uploadToCloudinary";
+import { formatHeight, formatVertical, formatWeight } from "@/utils/formatMetrics";
 import FeedCard from "@/components/FeedCard";
 
 interface UserProfile {
@@ -263,17 +264,17 @@ export default function ProfilePage() {
   const stats = [
     {
       label: "Height",
-      value: userProfile?.height || "—",
+      value: formatHeight(userProfile?.height),
       icon: TrendingUp,
     },
     {
       label: "Vertical",
-      value: userProfile?.vertical || "—",
+      value: formatVertical(userProfile?.vertical),
       icon: Sparkles,
     },
     {
       label: "Weight",
-      value: userProfile?.weight || "—",
+      value: formatWeight(userProfile?.weight),
       icon: Trophy,
     },
     {
