@@ -19,6 +19,7 @@ interface UserProfile {
   name: string;
   username?: string;
   photoURL?: string;
+  userType?: "athlete" | "coach";
 }
 
 interface Match {
@@ -139,6 +140,7 @@ export default function HomePage() {
           name: data.name || "Player",
           username: data.username,
           photoURL: data.photoURL,
+          userType: (data.userType as "athlete" | "coach") || "athlete",
         });
       }
 
@@ -312,20 +314,100 @@ export default function HomePage() {
             transition={{ delay: 0.1 }}
             className="mb-6"
           >
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-              <h2 className="text-lg font-semibold text-[#0F172A] mb-2">About LockerLink</h2>
-              <div className="space-y-3 text-sm text-slate-600 leading-relaxed">
-                <p>
-                  LockerLink connects volleyball athletes, coaches, and recruiters. Share your grind, discover new talent,
-                  and showcase highlights—all in one place built for the next generation of players.
-                </p>
-                <ul className="space-y-2 list-disc list-inside">
-                  <li><span className="font-semibold text-[#0F172A]">Post highlights:</span> tap <span className="font-medium">Upload</span> on your profile to drop a quick clip and keep your reel fresh.</li>
-                  <li><span className="font-semibold text-[#0F172A]">Interact with players:</span> like, comment, and share feedback on highlights to stay on everyone’s radar.</li>
-                  <li><span className="font-semibold text-[#0F172A]">Message others:</span> open Messages, search a name, and start a chat to plan scrims, talk recruiting, or connect with coaches.</li>
-                </ul>
-              </div>
-            </div>
+            {(() => {
+              const isCoach = userProfile?.userType === "coach";
+              const persona = isCoach
+                ? {
+                    emoji: "🧢",
+                    title: "Coach View",
+                    intro: "Use LockerLink to share knowledge and support athlete growth.",
+                    accent: "from-emerald-50 via-white to-amber-50",
+                    bullets: [
+                      {
+                        label: "Set up your coach profile",
+                        description: "Highlight your background, club, and age group so athletes know who’s leading them.",
+                        icon: Users,
+                      },
+                      {
+                        label: "Post advice & training",
+                        description: "Share drills, practice plans, and feedback that help players level up between sessions.",
+                        icon: Sparkles,
+                      },
+                      {
+                        label: "View athlete highlights",
+                        description: "Track player clips, monitor progress, and surface talent worth a closer look.",
+                        icon: Play,
+                      },
+                      {
+                        label: "Engage your community",
+                        description: "React, comment, and leave shoutouts to motivate athletes and keep morale high.",
+                        icon: MessageCircle,
+                      },
+                    ],
+                    outro: "LockerLink makes it simple to mentor players, reinforce culture, and inspire the next generation.",
+                  }
+                : {
+                    emoji: "🏐",
+                    title: "Athlete View",
+                    intro: "Use LockerLink to showcase your journey and connect with your volleyball community.",
+                    accent: "from-indigo-50 via-white to-sky-100",
+                    bullets: [
+                      {
+                        label: "Create your profile",
+                        description: "Add your position, club, and story so coaches and teammates instantly know your game.",
+                        icon: Users,
+                      },
+                      {
+                        label: "Upload highlights",
+                        description: "Drop quick clips and milestones to document your grind and track your growth.",
+                        icon: Upload,
+                      },
+                      {
+                        label: "Explore coaches & mentors",
+                        description: "Find shared posts, resources, and opportunities tailored to your level.",
+                        icon: Sparkles,
+                      },
+                      {
+                        label: "Engage with teammates",
+                        description: "Like, comment, and support other players to build your reputation and network.",
+                        icon: MessageCircle,
+                      },
+                    ],
+                    outro: "LockerLink helps you build your athletic identity, learn from others, and stay connected with the people shaping the game.",
+                  };
+
+              return (
+                <div className={`rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-7 bg-gradient-to-br ${persona.accent}`}>
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className="text-2xl sm:text-3xl">{persona.emoji}</div>
+                    <div>
+                      <h2 className="text-lg sm:text-xl font-semibold text-[#0F172A]">{persona.title}</h2>
+                      <p className="text-sm text-slate-600 leading-relaxed mt-1">{persona.intro}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    {persona.bullets.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <div
+                          key={item.label}
+                          className="flex items-start gap-3 rounded-2xl bg-white/85 px-4 py-3 shadow-sm border border-white/60"
+                        >
+                          <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-[#007AFF]/10 text-[#007AFF]">
+                            <Icon className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-[#0F172A]">{item.label}</p>
+                            <p className="text-sm text-slate-600 leading-relaxed">{item.description}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-5 text-sm text-slate-600 leading-relaxed">{persona.outro}</p>
+                </div>
+              );
+            })()}
           </motion.div>
 
           {/* Welcome Section */}

@@ -104,6 +104,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
           const data = userDoc.data() as any;
           setProfile({
             ...data,
+            username: data.username || "",
             ageGroup:
               data.ageGroup ||
               (typeof data.age === "number"
