@@ -314,10 +314,17 @@ export default function HomePage() {
           >
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
               <h2 className="text-lg font-semibold text-[#0F172A] mb-2">About LockerLink</h2>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                LockerLink connects volleyball athletes, coaches, and recruiters. Share your grind, discover new talent,
-                and showcase highlights—all in one place built for the next generation of players.
-              </p>
+              <div className="space-y-3 text-sm text-slate-600 leading-relaxed">
+                <p>
+                  LockerLink connects volleyball athletes, coaches, and recruiters. Share your grind, discover new talent,
+                  and showcase highlights—all in one place built for the next generation of players.
+                </p>
+                <ul className="space-y-2 list-disc list-inside">
+                  <li><span className="font-semibold text-[#0F172A]">Post highlights:</span> tap <span className="font-medium">Upload</span> on your profile to drop a quick clip and keep your reel fresh.</li>
+                  <li><span className="font-semibold text-[#0F172A]">Interact with players:</span> like, comment, and share feedback on highlights to stay on everyone’s radar.</li>
+                  <li><span className="font-semibold text-[#0F172A]">Message others:</span> open Messages, search a name, and start a chat to plan scrims, talk recruiting, or connect with coaches.</li>
+                </ul>
+              </div>
             </div>
           </motion.div>
 

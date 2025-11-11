@@ -55,7 +55,7 @@ export default function ChatWindow({ chatId }: ChatWindowProps) {
   const { user } = useUser();
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageText, setMessageText] = useState("");
-  const [otherUser, setOtherUser] = useState<{ id: string; name: string; photoURL?: string; userType?: string } | null>(null);
+  const [otherUser, setOtherUser] = useState<{ id: string; name: string; username?: string; photoURL?: string; userType?: string } | null>(null);
   const [currentUserPhoto, setCurrentUserPhoto] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -86,6 +86,7 @@ export default function ChatWindow({ chatId }: ChatWindowProps) {
               setOtherUser({
                 id: otherUserId,
                 name: userData.name || "Unknown",
+                username: userData.username || "",
                 photoURL: userData.photoURL,
                 userType: userData.userType || "athlete",
               });
@@ -310,7 +311,10 @@ export default function ChatWindow({ chatId }: ChatWindowProps) {
               </span>
             )}
           </div>
-          <p className="text-xs text-[#6B7280]">Active</p>
+          <div className="flex items-center gap-2 text-xs text-[#6B7280]">
+            {otherUser?.username && <span className="truncate">@{otherUser.username}</span>}
+            <span>Active</span>
+          </div>
         </div>
         {otherUser?.id && (
           <Link
@@ -320,6 +324,11 @@ export default function ChatWindow({ chatId }: ChatWindowProps) {
             View Profile
           </Link>
         )}
+      </div>
+
+      {/* Safety reminder */}
+      <div className="border-b border-[#E5E7EB] bg-amber-50 px-4 py-3 text-xs text-[#92400E]">
+        Keep conversations respectful. Use safe language, avoid sharing personal info, and follow local laws and LockerLink community guidelines.
       </div>
 
       {/* Messages Area - Instagram style */}

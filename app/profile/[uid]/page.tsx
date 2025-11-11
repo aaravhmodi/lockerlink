@@ -59,6 +59,7 @@ interface Post {
 
 interface ViewedProfile {
   name?: string;
+  username?: string;
   team?: string;
   sport?: string;
   city?: string;
@@ -290,6 +291,9 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
             <div className="space-y-6">
               <div>
                 <h1 className="text-2xl sm:text-3xl font-semibold text-[#111827]">{profile.name}</h1>
+                {profile.username && (
+                  <p className="text-sm text-[#6B7280] mt-1">@{profile.username}</p>
+                )}
                 {profile.team && (
                   <p className="text-lg sm:text-xl text-[#6B7280] mt-2">{profile.team}</p>
                 )}
