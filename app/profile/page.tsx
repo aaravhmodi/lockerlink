@@ -959,22 +959,52 @@ export default function ProfilePage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-[#111827] mb-2">Video *</label>
+                <label
+                  htmlFor="highlight-video"
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#1E293B] text-white px-4 py-2 text-sm font-semibold shadow-md hover:bg-[#111827] transition-colors cursor-pointer"
+                >
+                  Choose Video
+                  {videoFile?.name && (
+                    <span className="text-xs font-normal text-white/80 truncate max-w-[160px]">
+                      {videoFile.name}
+                    </span>
+                  )}
+                </label>
                 <input
+                  id="highlight-video"
                   type="file"
                   accept="video/*"
                   onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20"
+                  className="hidden"
                 />
+                {!videoFile?.name && (
+                  <p className="mt-2 text-xs text-slate-500">MP4 or MOV recommended • Max 200 MB</p>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-[#111827] mb-2">Thumbnail (optional)</label>
+                <label
+                  htmlFor="highlight-thumbnail"
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#1F2937] text-white px-4 py-2 text-sm font-semibold shadow-md hover:bg-[#0F172A] transition-colors cursor-pointer"
+                >
+                  Choose Image
+                  {thumbnailFile?.name && (
+                    <span className="text-xs font-normal text-white/80 truncate max-w-[160px]">
+                      {thumbnailFile.name}
+                    </span>
+                  )}
+                </label>
                 <input
+                  id="highlight-thumbnail"
                   type="file"
                   accept="image/*"
                   onChange={(e) => setThumbnailFile(e.target.files?.[0] || null)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20"
+                  className="hidden"
                 />
+                {!thumbnailFile?.name && (
+                  <p className="mt-2 text-xs text-slate-500">PNG or JPG • 16:9 ratio looks best</p>
+                )}
               </div>
 
               <div>
