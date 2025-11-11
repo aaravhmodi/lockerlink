@@ -11,7 +11,39 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { HiChat } from "react-icons/hi";
-import { formatHeight, formatVertical, formatWeight } from "@/utils/formatMetrics";
+import { formatHeight, formatVertical, formatWeight, formatTouch } from "@/utils/formatMetrics";
+
+const MONTH_TO_INDEX: Record<string, number> = {
+  January: 0,
+  February: 1,
+  March: 2,
+  April: 3,
+  May: 4,
+  June: 5,
+  July: 6,
+  August: 7,
+  September: 8,
+  October: 9,
+  November: 10,
+  December: 11,
+};
+
+const calculateAge = (month?: string, year?: string) => {
+  if (!month || !year) return undefined;
+  const numericYear = Number(year);
+  if (Number.isNaN(numericYear)) return undefined;
+  const monthIndex = MONTH_TO_INDEX[month];
+  if (monthIndex === undefined) return undefined;
+  const birthDate = new Date(numericYear, monthIndex, 1);
+  const now = new Date();
+  let age = now.getFullYear() - birthDate.getFullYear();
+  const hasHadBirthday =
+    now.getMonth() > monthIndex || (now.getMonth() === monthIndex && now.getDate() >= 1);
+  if (!hasHadBirthday) {
+    age -= 1;
+  }
+  return age >= 0 ? age : undefined;
+};
 
 interface Post {
   id: string;
@@ -32,14 +64,22 @@ interface ViewedProfile {
   city?: string;
   bio?: string;
   photoURL?: string;
-  age?: number;
   position?: string;
+  secondaryPosition?: string;
+  ageGroup?: string;
+  birthMonth?: string;
+  birthYear?: string;
   height?: string;
   vertical?: string;
   weight?: string;
+  blockTouch?: string;
+  standingTouch?: string;
+  spikeTouch?: string;
   division?: string;
   coachMessage?: string;
   userType?: "athlete" | "coach";
+  ogLockerLinkUser?: boolean;
+  points?: number;
 }
 
 export default function UserProfilePage({ params }: { params: Promise<{ uid: string }> }) {
@@ -60,9 +100,23 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
       try {
         const userDoc = await getDoc(doc(db, "users", uid));
         if (userDoc.exists()) {
-          const data = userDoc.data() as ViewedProfile;
+          const data = userDoc.data() as any;
           setProfile({
             ...data,
+            ageGroup:
+              data.ageGroup ||
+              (typeof data.age === "number"
+                ? data.age >= 18
+                  ? "18U"
+                  : data.age >= 17
+                    ? "17U"
+                    : data.age >= 16
+                      ? "16U"
+                      : data.age >= 15
+                        ? "15U"
+                        : undefined
+                : undefined),
+            points: typeof data.points === "number" ? data.points : 0,
             userType: (data.userType as "athlete" | "coach") || "athlete",
           });
         }
@@ -162,6 +216,26 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
 
   const isOwnProfile = currentUser?.uid === uid;
   const isCoachProfile = profile?.userType === "coach";
+  const derivedAge = calculateAge(profile.birthMonth, profile.birthYear);
+  const athleteStatCards = !isCoachProfile
+    ? [
+        { label: "Age", value: derivedAge !== undefined ? `${derivedAge}` : "—" },
+        { label: "Height", value: formatHeight(profile.height) },
+        { label: "Vertical", value: formatVertical(profile.vertical) },
+        { label: "Weight", value: formatWeight(profile.weight) },
+        { label: "Block Touch", value: formatTouch(profile.blockTouch) },
+        { label: "Standing Touch", value: formatTouch(profile.standingTouch) },
+        { label: "Spike Touch", value: formatTouch(profile.spikeTouch) },
+        { label: "Points", value: profile.points !== undefined ? `${profile.points}` : "0" },
+      ]
+    : [];
+  const coachStatCards = isCoachProfile
+    ? [
+        profile.team ? { label: "Team / Club", value: profile.team } : null,
+        profile.division ? { label: "Division", value: profile.division } : null,
+        profile.city ? { label: "Region", value: profile.city } : null,
+      ].filter(Boolean) as { label: string; value: string }[]
+    : [];
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] pb-20 md:pb-0">
@@ -219,64 +293,54 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
                 {profile.team && (
                   <p className="text-lg sm:text-xl text-[#6B7280] mt-2">{profile.team}</p>
                 )}
-                {profile.userType && (
-                  <div className="mt-3 inline-flex items-center gap-2">
+                <div className="mt-3 flex items-center gap-2 flex-wrap">
+                  {profile.position && (
+                    <span className="rounded-full bg-[#3B82F6] text-white px-3 py-1 text-sm font-medium">
+                      {profile.position}
+                    </span>
+                  )}
+                  {!isCoachProfile && profile.secondaryPosition && (
+                    <span className="rounded-full bg-blue-50 text-[#1D4ED8] px-3 py-1 text-xs font-semibold uppercase tracking-wide">
+                      Secondary: {profile.secondaryPosition}
+                    </span>
+                  )}
+                  {!isCoachProfile && profile.ageGroup && (
+                    <span className="rounded-full bg-blue-50 text-[#3B82F6] px-3 py-1 text-sm font-medium">
+                      {profile.ageGroup}
+                    </span>
+                  )}
+                  {profile.userType && (
                     <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-600">
                       {profile.userType === "coach" ? "Coach" : "Athlete"}
                     </span>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 pt-4 sm:pt-6 border-t border-[#E5E7EB]">
-                {!isCoachProfile && profile.age && (
-                  <div className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
-                    <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">Age</p>
-                    <p className="text-xl font-semibold text-[#111827]">{profile.age}</p>
-                  </div>
-                )}
-                {!isCoachProfile && profile.height && (
-                  <div className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
-                    <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">Height</p>
-                    <p className="text-xl font-semibold text-[#111827]">{formatHeight(profile.height)}</p>
-                  </div>
-                )}
-                {!isCoachProfile && profile.vertical && (
-                  <div className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
-                    <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">Vertical</p>
-                    <p className="text-xl font-semibold text-[#111827]">{formatVertical(profile.vertical)}</p>
-                  </div>
-                )}
-                {!isCoachProfile && profile.weight && (
-                  <div className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
-                    <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">Weight</p>
-                    <p className="text-xl font-semibold text-[#111827]">{formatWeight(profile.weight)}</p>
-                  </div>
-                )}
-                {!isCoachProfile && profile.position && (
-                  <div className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
-                    <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">Position</p>
-                    <p className="text-xl font-semibold text-[#111827]">{profile.position}</p>
-                  </div>
-                )}
-                {!isCoachProfile && profile.city && (
-                  <div className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
-                    <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">City</p>
-                    <p className="text-xl font-semibold text-[#111827]">{profile.city}</p>
-                  </div>
-                )}
-                {isCoachProfile && profile.city && (
-                  <div className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
-                    <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">Region</p>
-                    <p className="text-xl font-semibold text-[#111827]">{profile.city}</p>
-                  </div>
-                )}
-                {isCoachProfile && profile.division && (
-                  <div className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
-                    <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">Division</p>
-                    <p className="text-xl font-semibold text-[#111827]">{profile.division}</p>
-                  </div>
-                )}
-              </div>
+
+              {!isCoachProfile && athleteStatCards.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 pt-4 sm:pt-6 border-t border-[#E5E7EB]">
+                  {athleteStatCards.map((card) => (
+                    <div key={card.label} className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
+                      <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">
+                        {card.label}
+                      </p>
+                      <p className="text-xl font-semibold text-[#111827]">{card.value}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {isCoachProfile && coachStatCards.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 pt-4 sm:pt-6 border-t border-[#E5E7EB]">
+                  {coachStatCards.map((card) => (
+                    <div key={card.label} className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
+                      <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">
+                        {card.label}
+                      </p>
+                      <p className="text-xl font-semibold text-[#111827]">{card.value}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {!isCoachProfile && profile.bio && (
                 <div className="pt-6 border-t border-[#E5E7EB]">

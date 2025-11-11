@@ -44,6 +44,9 @@ export function useProfileComplete() {
               data.city &&
               data.position &&
               data.sport &&
+              data.ageGroup &&
+              data.birthMonth &&
+              data.birthYear &&
               data.height &&
               data.vertical &&
               data.weight);

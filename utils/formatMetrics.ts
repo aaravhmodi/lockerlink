@@ -44,3 +44,18 @@ export const formatWeight = (raw?: string | number | null) => {
   return str;
 };
 
+export const formatTouch = (raw?: string | number | null) => {
+  if (raw === undefined || raw === null) return "—";
+  const str = `${raw}`.trim();
+  if (!str) return "—";
+  if (/"|in|inch|cm/i.test(str)) {
+    return str;
+  }
+  const numeric = Number(str);
+  if (!Number.isNaN(numeric)) {
+    return `${numeric}"`;
+  }
+  return str;
+};
+
+

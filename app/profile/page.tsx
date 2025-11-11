@@ -21,11 +21,14 @@ import {
   Trophy,
   Users,
   Trash2,
+  ArrowUp,
+  Zap,
+  Star,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { uploadImageToCloudinary, uploadVideoToCloudinary } from "@/utils/uploadToCloudinary";
-import { formatHeight, formatVertical, formatWeight } from "@/utils/formatMetrics";
+import { formatHeight, formatVertical, formatWeight, formatTouch } from "@/utils/formatMetrics";
 import FeedCard from "@/components/FeedCard";
 import ManagePostsModal from "@/components/ManagePostsModal";
 
@@ -34,16 +37,24 @@ interface UserProfile {
   username?: string;
   team?: string;
   position?: string;
-  age?: number;
+  secondaryPosition?: string;
+  ageGroup?: string;
+  birthMonth?: string;
+  birthYear?: string;
   city?: string;
   height?: string;
   vertical?: string;
   weight?: string;
+  blockTouch?: string;
+  standingTouch?: string;
+  spikeTouch?: string;
+  points?: number;
   photoURL?: string;
   bio?: string;
   userType?: "athlete" | "coach";
   division?: string;
   coachMessage?: string;
+  ogLockerLinkUser?: boolean;
 }
 
 interface Highlight {
@@ -73,6 +84,37 @@ interface Post {
 }
 
 const DEFAULT_CHALLENGE_ID = "challenge-1";
+const MONTH_TO_INDEX: Record<string, number> = {
+  January: 0,
+  February: 1,
+  March: 2,
+  April: 3,
+  May: 4,
+  June: 5,
+  July: 6,
+  August: 7,
+  September: 8,
+  October: 9,
+  November: 10,
+  December: 11,
+};
+
+const calculateAge = (month?: string, year?: string) => {
+  if (!month || !year) return undefined;
+  const numericYear = Number(year);
+  if (Number.isNaN(numericYear)) return undefined;
+  const monthIndex = MONTH_TO_INDEX[month];
+  if (monthIndex === undefined) return undefined;
+  const birthDate = new Date(numericYear, monthIndex, 1);
+  const now = new Date();
+  let age = now.getFullYear() - birthDate.getFullYear();
+  const hasHadBirthday =
+    now.getMonth() > monthIndex || (now.getMonth() === monthIndex && now.getDate() >= 1);
+  if (!hasHadBirthday) {
+    age -= 1;
+  }
+  return age >= 0 ? age : undefined;
+};
 
 export default function ProfilePage() {
   const { user, loading } = useUser();
@@ -161,21 +203,43 @@ export default function ProfilePage() {
       const userDoc = await getDoc(doc(db, "users", user.uid));
       if (userDoc.exists()) {
         const data = userDoc.data();
+        const ageGroup =
+          data.ageGroup ||
+          (typeof data.age === "number"
+            ? data.age >= 18
+              ? "18U"
+              : data.age >= 17
+                ? "17U"
+                : data.age >= 16
+                  ? "16U"
+                  : data.age >= 15
+                    ? "15U"
+                    : undefined
+            : undefined);
+
         setUserProfile({
           name: data.name || "Player",
           username: data.username,
           team: data.team,
           position: data.position,
-          age: data.age,
+          secondaryPosition: data.secondaryPosition,
+          ageGroup,
+          birthMonth: data.birthMonth,
+          birthYear: data.birthYear,
           city: data.city,
           height: data.height,
           vertical: data.vertical,
           weight: data.weight,
+          blockTouch: data.blockTouch,
+          standingTouch: data.standingTouch,
+          spikeTouch: data.spikeTouch,
           photoURL: data.photoURL,
           bio: data.bio,
           userType: (data.userType as "athlete" | "coach") || "athlete",
           division: data.division,
           coachMessage: data.coachMessage,
+          points: typeof data.points === "number" ? data.points : 0,
+          ogLockerLinkUser: data.ogLockerLinkUser ?? true,
         });
       }
 
@@ -322,6 +386,36 @@ export default function ProfilePage() {
         },
       ].filter((card) => card.value)
     : [];
+  const derivedAge = calculateAge(userProfile?.birthMonth, userProfile?.birthYear);
+
+  const athleteInfoCards = !isCoachProfile
+    ? [
+        userProfile?.team
+          ? {
+              label: "Current Team",
+              value: userProfile.team,
+            }
+          : null,
+        userProfile?.city
+          ? {
+              label: "City",
+              value: userProfile.city,
+            }
+          : null,
+        userProfile?.ageGroup
+          ? {
+              label: "Age Group",
+              value: userProfile.ageGroup,
+            }
+          : null,
+        derivedAge !== undefined
+          ? {
+              label: "Age",
+              value: `${derivedAge}`,
+            }
+          : null,
+      ].filter(Boolean) as { label: string; value: string }[]
+    : [];
   const stats = isCoachProfile
     ? [
         {
@@ -346,12 +440,38 @@ export default function ProfilePage() {
           value: formatWeight(userProfile?.weight),
           icon: Trophy,
         },
-        {
-          label: "Highlights",
-          value: highlights.length.toString(),
-          icon: Play,
-        },
       ];
+
+  if (!isCoachProfile) {
+    stats.push(
+      {
+        label: "Block Touch",
+        value: formatTouch(userProfile?.blockTouch),
+        icon: ArrowUp,
+      },
+      {
+        label: "Standing Touch",
+        value: formatTouch(userProfile?.standingTouch),
+        icon: Users,
+      },
+      {
+        label: "Spike Touch",
+        value: formatTouch(userProfile?.spikeTouch),
+        icon: Zap,
+      },
+      {
+        label: "Highlights",
+        value: highlights.length.toString(),
+        icon: Play,
+      },
+      {
+        label: "Points",
+        value: userProfile?.points !== undefined ? `${userProfile.points}` : "0",
+        icon: Star,
+      }
+    );
+  }
+
   const statsGridClass = isCoachProfile
     ? "grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4"
     : "grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4";
@@ -487,9 +607,14 @@ export default function ProfilePage() {
                     {userProfile.position}
                   </div>
                 )}
-            {userProfile?.age && !isCoachProfile && (
+                {!isCoachProfile && userProfile?.secondaryPosition && (
+                  <div className="bg-blue-50 text-[#1D4ED8] px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide">
+                    Secondary: {userProfile.secondaryPosition}
+                  </div>
+                )}
+                {!isCoachProfile && userProfile?.ageGroup && (
                   <div className="bg-blue-50 text-[#3B82F6] px-3 py-1 rounded-full text-sm font-medium border-0">
-                    {userProfile.age} years old
+                    {userProfile.ageGroup}
                   </div>
                 )}
                 {userProfile?.userType && (
@@ -507,20 +632,16 @@ export default function ProfilePage() {
           )}
 
           {/* Profile details */}
-          {!isCoachProfile && (
+          {!isCoachProfile && athleteInfoCards.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {userProfile?.team && (
-                <div className="bg-slate-50 rounded-2xl p-4">
-                  <p className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-1">Current Team</p>
-                  <p className="text-[#0F172A] font-medium">{userProfile.team}</p>
+              {athleteInfoCards.map((card) => (
+                <div key={card.label} className="bg-slate-50 rounded-2xl p-4">
+                  <p className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-1">
+                    {card.label}
+                  </p>
+                  <p className="text-[#0F172A] font-medium">{card.value}</p>
                 </div>
-              )}
-              {userProfile?.city && (
-                <div className="bg-slate-50 rounded-2xl p-4">
-                  <p className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-1">City</p>
-                  <p className="text-[#0F172A] font-medium">{userProfile.city}</p>
-                </div>
-              )}
+              ))}
             </div>
           )}
           {isCoachProfile && coachInfoCards.length > 0 && (
@@ -573,6 +694,18 @@ export default function ProfilePage() {
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {!isCoachProfile && userProfile?.ogLockerLinkUser && (
+            <div className="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-amber-100 px-4 py-3 shadow-sm flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-400 text-white font-semibold">
+                OG
+              </div>
+              <div className="text-sm text-[#92400E]">
+                <p className="font-semibold">OG LockerLink User</p>
+                <p className="text-xs">Thanks for being part of the first wave of the LockerLink community.</p>
+              </div>
             </div>
           )}
 

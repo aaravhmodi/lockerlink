@@ -12,18 +12,26 @@ interface UserProfile {
   username: string;
   name: string;
   team: string;
-  age: number;
+  ageGroup: string;
+  birthMonth: string;
+  birthYear: string;
   city: string;
   position: string;
+  secondaryPosition?: string;
   sport: string;
   bio: string;
   height: string;
   vertical: string;
   weight: string;
+  blockTouch?: string;
+  standingTouch?: string;
+  spikeTouch?: string;
+  points?: number;
   photoURL?: string;
   userType: "athlete" | "coach";
   division?: string;
   coachMessage?: string;
+  ogLockerLinkUser?: boolean;
 }
 
 interface ProfileFormProps {
@@ -47,6 +55,43 @@ const parseNumericValue = (value?: string) => {
   return match ? match[1] : "";
 };
 
+const MONTH_OPTIONS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+const currentYear = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from({ length: currentYear - 2016 + 1 }, (_, index) => `${currentYear - index}`);
+const AGE_GROUP_OPTIONS = ["15U", "16U", "17U", "18U"];
+const POSITION_OPTIONS = [
+  "Outside Hitter (Left Side)",
+  "Opposite Hitter (Right Side)",
+  "Middle Blocker (Middle Hitter)",
+  "Setter",
+  "Libero",
+  "Defensive Specialist",
+  "Serving Specialist",
+];
+
+const convertAgeToGroup = (age?: number) => {
+  if (typeof age !== "number") return "";
+  if (age >= 18) return "18U";
+  if (age >= 17) return "17U";
+  if (age >= 16) return "16U";
+  if (age >= 15) return "15U";
+  return "";
+};
+
 export default function ProfileForm({ onSave }: ProfileFormProps) {
   const { user } = useUser();
   const [loading, setLoading] = useState(true);
@@ -55,18 +100,26 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
     username: "",
     name: "",
     team: "",
-    age: 17,
+    ageGroup: "",
+    birthMonth: "",
+    birthYear: "",
     city: "",
     position: "",
+    secondaryPosition: "",
     sport: "Volleyball",
     bio: "",
     height: "",
     vertical: "",
     weight: "",
+    blockTouch: "",
+    standingTouch: "",
+    spikeTouch: "",
+    points: 0,
     photoURL: "",
     userType: "athlete",
-  division: "",
-  coachMessage: "",
+    division: "",
+    coachMessage: "",
+    ogLockerLinkUser: false,
   });
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -76,6 +129,10 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
   const [heightInches, setHeightInches] = useState<string>("");
   const [verticalInches, setVerticalInches] = useState<string>("");
   const [weightLbs, setWeightLbs] = useState<string>("");
+  const [blockTouch, setBlockTouch] = useState<string>("");
+  const [standingTouch, setStandingTouch] = useState<string>("");
+  const [spikeTouch, setSpikeTouch] = useState<string>("");
+  const [points, setPoints] = useState<string>("0");
   const isCoach = formData.userType === "coach";
 
   const handleUserTypeSelect = (nextType: "athlete" | "coach") => {
@@ -86,6 +143,10 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
       setHeightInches("");
       setVerticalInches("");
       setWeightLbs("");
+      setBlockTouch("");
+      setStandingTouch("");
+      setSpikeTouch("");
+      setPoints("0");
       setFormData((prev) => ({
         ...prev,
         userType: nextType,
@@ -93,16 +154,34 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         vertical: "",
         weight: "",
         position: "",
+        secondaryPosition: "",
+        ageGroup: "",
+        birthMonth: "",
+        birthYear: "",
+        blockTouch: "",
+        standingTouch: "",
+        spikeTouch: "",
+        points: 0,
         division: prev.division || "",
       }));
     } else {
       const heightParts = parseHeightValue(formData.height);
       const verticalValue = parseNumericValue(formData.vertical);
       const weightValue = parseNumericValue(formData.weight);
+      const blockValue = parseNumericValue(formData.blockTouch);
+      const standingValue = parseNumericValue(formData.standingTouch);
+      const spikeValue = parseNumericValue(formData.spikeTouch);
+      const pointsValue = parseNumericValue(
+        formData.points !== undefined ? String(formData.points) : undefined
+      );
       setHeightFeet(heightParts.feet);
       setHeightInches(heightParts.inches);
       setVerticalInches(verticalValue);
       setWeightLbs(weightValue);
+      setBlockTouch(blockValue);
+      setStandingTouch(standingValue);
+      setSpikeTouch(spikeValue);
+      setPoints(pointsValue);
       setFormData((prev) => ({
         ...prev,
         userType: nextType,
@@ -117,31 +196,50 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
       try {
         const userDoc = await getDoc(doc(db, "users", user.uid));
         if (userDoc.exists()) {
-          const data = userDoc.data() as UserProfile;
+          const data = userDoc.data() as any;
           const heightParts = parseHeightValue(data.height);
           const verticalValue = parseNumericValue(data.vertical);
           const weightValue = parseNumericValue(data.weight);
+          const blockValue = parseNumericValue(data.blockTouch);
+          const standingValue = parseNumericValue(data.standingTouch);
+          const spikeValue = parseNumericValue(data.spikeTouch);
+          const pointsValue = parseNumericValue(
+            data.points !== undefined ? String(data.points) : undefined
+          );
+          const derivedAgeGroup = data.ageGroup || convertAgeToGroup(data.age);
           setFormData({
             username: data.username || "",
             name: data.name || "",
             team: data.team || "",
-            age: data.age || 17,
+            ageGroup: derivedAgeGroup || "",
+            birthMonth: data.birthMonth || "",
+            birthYear: data.birthYear || "",
             city: data.city || "",
             position: data.position || "",
+            secondaryPosition: data.secondaryPosition || "",
             sport: data.sport || "Volleyball",
             bio: data.bio || "",
             height: data.height || "",
             vertical: data.vertical || "",
             weight: data.weight || "",
+            blockTouch: data.blockTouch || "",
+            standingTouch: data.standingTouch || "",
+            spikeTouch: data.spikeTouch || "",
+            points: typeof data.points === "number" ? data.points : 0,
             photoURL: data.photoURL || "",
             userType: (data.userType as "athlete" | "coach") || "athlete",
-        division: data.division || "",
-        coachMessage: data.coachMessage || "",
+            division: data.division || "",
+            coachMessage: data.coachMessage || "",
+            ogLockerLinkUser: data.ogLockerLinkUser ?? true,
           });
           setHeightFeet(heightParts.feet);
           setHeightInches(heightParts.inches);
           setVerticalInches(verticalValue);
           setWeightLbs(weightValue);
+          setBlockTouch(blockValue);
+          setStandingTouch(standingValue);
+          setSpikeTouch(spikeValue);
+          setPoints(pointsValue);
           if (data.photoURL) {
             setPhotoPreview(null);
           }
@@ -150,9 +248,22 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
           setHeightInches("");
           setVerticalInches("");
           setWeightLbs("");
+          setBlockTouch("");
+          setStandingTouch("");
+          setSpikeTouch("");
+          setPoints("0");
           setFormData((prev) => ({
             ...prev,
             userType: "athlete",
+            ageGroup: "",
+            birthMonth: "",
+            birthYear: "",
+            secondaryPosition: "",
+            blockTouch: "",
+            standingTouch: "",
+            spikeTouch: "",
+            points: 0,
+            ogLockerLinkUser: prev.ogLockerLinkUser ?? true,
           }));
         }
       } catch (error) {
@@ -235,10 +346,27 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
 
       const isCoachSubmit = formData.userType === "coach";
 
+      if (!isCoachSubmit) {
+        if (!formData.ageGroup) {
+          alert("Please select your age group (17U or 18U).");
+          setSaving(false);
+          return;
+        }
+        if (!formData.birthMonth || !formData.birthYear) {
+          alert("Please provide your birth month and year.");
+          setSaving(false);
+          return;
+        }
+      }
+
       const feetValue = heightFeet ? parseInt(heightFeet, 10) : 0;
       const inchValue = heightInches ? parseInt(heightInches, 10) : 0;
       const verticalValue = verticalInches ? parseInt(verticalInches, 10) : 0;
       const weightValue = weightLbs ? parseInt(weightLbs, 10) : 0;
+      const blockValue = blockTouch ? parseInt(blockTouch, 10) : 0;
+      const standingValue = standingTouch ? parseInt(standingTouch, 10) : 0;
+      const spikeValue = spikeTouch ? parseInt(spikeTouch, 10) : 0;
+      const pointsValue = points ? parseInt(points, 10) : 0;
 
       const normalizedHeight =
         isCoachSubmit || (!feetValue && !inchValue)
@@ -248,6 +376,12 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         isCoachSubmit || !verticalValue ? "" : `${verticalValue}"`;
       const normalizedWeight =
         isCoachSubmit || !weightValue ? "" : `${weightValue} lbs`;
+      const normalizedBlockTouch =
+        isCoachSubmit || !blockValue ? "" : `${blockValue}"`;
+      const normalizedStandingTouch =
+        isCoachSubmit || !standingValue ? "" : `${standingValue}"`;
+      const normalizedSpikeTouch =
+        isCoachSubmit || !spikeValue ? "" : `${spikeValue}"`;
 
       // Save profile using setDoc with merge: true (creates or updates)
       // Store username in lowercase for case-insensitive searches
@@ -262,8 +396,19 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
           vertical: normalizedVertical,
           weight: normalizedWeight,
           userType: formData.userType,
-        division: formData.division || "",
-        coachMessage: isCoachSubmit ? formData.coachMessage?.trim() || "" : formData.coachMessage?.trim() || formData.bio || "",
+          ageGroup: isCoachSubmit ? "" : formData.ageGroup,
+          birthMonth: isCoachSubmit ? "" : formData.birthMonth,
+          birthYear: isCoachSubmit ? "" : formData.birthYear,
+          secondaryPosition: isCoachSubmit ? "" : formData.secondaryPosition || "",
+          blockTouch: normalizedBlockTouch,
+          standingTouch: normalizedStandingTouch,
+          spikeTouch: normalizedSpikeTouch,
+          division: formData.division || "",
+          coachMessage: isCoachSubmit
+            ? formData.coachMessage?.trim() || ""
+            : formData.coachMessage?.trim() || formData.bio || "",
+          ogLockerLinkUser: formData.ogLockerLinkUser ?? true,
+          points: isCoachSubmit ? 0 : pointsValue,
         },
         { merge: true }
       );
@@ -275,9 +420,18 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         height: normalizedHeight,
         vertical: normalizedVertical,
         weight: normalizedWeight,
+        blockTouch: normalizedBlockTouch,
+        standingTouch: normalizedStandingTouch,
+        spikeTouch: normalizedSpikeTouch,
         division: formData.division || "",
         coachMessage: formData.coachMessage || "",
+        ogLockerLinkUser: formData.ogLockerLinkUser ?? true,
+        points: isCoachSubmit ? 0 : pointsValue,
       });
+      setBlockTouch(blockTouch ? blockTouch : "");
+      setStandingTouch(standingTouch ? standingTouch : "");
+      setSpikeTouch(spikeTouch ? spikeTouch : "");
+      setPoints(isCoachSubmit ? "0" : String(pointsValue));
       setPhotoPreview(null);
       setPhotoFile(null);
       
@@ -408,21 +562,59 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
             </div>
           </div>
           {!isCoach && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4 sm:items-end">
-              <div className="sm:max-w-[120px]">
-                <label className="mb-2 block text-sm font-medium text-[#111827]">Age *</label>
-                <input
-                  type="number"
-                  value={formData.age}
-                  onChange={(e) => setFormData({ ...formData, age: parseInt(e.target.value) || 17 })}
-                  required
-                  min="13"
-                  max="19"
-                  className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
-                  inputMode="numeric"
-                />
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-[#111827]">Age Group *</label>
+                  <select
+                    value={formData.ageGroup}
+                    onChange={(e) => setFormData({ ...formData, ageGroup: e.target.value })}
+                    required={!isCoach}
+                    className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+                  >
+                    <option value="">Select age group</option>
+                    {AGE_GROUP_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-[#111827]">Birth Month *</label>
+                  <select
+                    value={formData.birthMonth}
+                    onChange={(e) => setFormData({ ...formData, birthMonth: e.target.value })}
+                    required={!isCoach}
+                    className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+                  >
+                    <option value="">Select month</option>
+                    {MONTH_OPTIONS.map((month) => (
+                      <option key={month} value={month}>
+                        {month}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-[#111827]">Birth Year *</label>
+                  <select
+                    value={formData.birthYear}
+                    onChange={(e) => setFormData({ ...formData, birthYear: e.target.value })}
+                    required={!isCoach}
+                    className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+                  >
+                    <option value="">Select year</option>
+                    {YEAR_OPTIONS.map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div className="sm:col-span-2">
+
+              <div className="mt-4">
                 <label className="mb-2 block text-sm font-medium text-[#111827]">Height *</label>
                 <div className="flex gap-3">
                   <div className="flex-1">
@@ -457,7 +649,7 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
                   </div>
                 </div>
               </div>
-            </div>
+            </>
           )}
         </div>
       </div>
@@ -550,15 +742,33 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
               className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
             >
               <option value="">Select position</option>
-              <option value="Setter">Setter</option>
-              <option value="Outside Hitter">Outside Hitter</option>
-              <option value="Opposite">Opposite</option>
-              <option value="Middle Blocker">Middle Blocker</option>
-              <option value="Libero">Libero</option>
+              {POSITION_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
             </select>
           </div>
         )}
       </div>
+
+      {!isCoach && (
+        <div>
+          <label className="mb-2 block text-sm font-medium text-[#111827]">Secondary Position (optional)</label>
+          <select
+            value={formData.secondaryPosition || ""}
+            onChange={(e) => setFormData({ ...formData, secondaryPosition: e.target.value })}
+            className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+          >
+            <option value="">None</option>
+            {POSITION_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {!isCoach && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -593,6 +803,70 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
               />
               <span className="absolute inset-y-0 right-4 flex items-center text-sm text-[#6B7280]">lbs</span>
             </div>
+          </div>
+        </div>
+      )}
+
+      {!isCoach && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[#111827]">Block Touch (optional)</label>
+            <div className="relative">
+              <input
+                type="number"
+                min={0}
+                max={150}
+                value={blockTouch}
+                onChange={(e) => setBlockTouch(e.target.value)}
+                placeholder="Inches"
+                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 pr-12 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+              />
+              <span className="absolute inset-y-0 right-4 flex items-center text-sm text-[#6B7280]">in</span>
+            </div>
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[#111827]">Standing Touch (optional)</label>
+            <div className="relative">
+              <input
+                type="number"
+                min={0}
+                max={150}
+                value={standingTouch}
+                onChange={(e) => setStandingTouch(e.target.value)}
+                placeholder="Inches"
+                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 pr-12 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+              />
+              <span className="absolute inset-y-0 right-4 flex items-center text-sm text-[#6B7280]">in</span>
+            </div>
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[#111827]">Spike Touch (optional)</label>
+            <div className="relative">
+              <input
+                type="number"
+                min={0}
+                max={150}
+                value={spikeTouch}
+                onChange={(e) => setSpikeTouch(e.target.value)}
+                placeholder="Inches"
+                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 pr-12 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+              />
+              <span className="absolute inset-y-0 right-4 flex items-center text-sm text-[#6B7280]">in</span>
+            </div>
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[#111827]">Points</label>
+            <input
+              type="number"
+              min={0}
+              value={points}
+              onChange={(e) => {
+                setPoints(e.target.value);
+                setFormData({ ...formData, points: Number(e.target.value) || 0 });
+              }}
+              placeholder="e.g., 12"
+              className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+            />
           </div>
         </div>
       )}
