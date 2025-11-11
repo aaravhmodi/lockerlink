@@ -416,7 +416,7 @@ export default function ProfilePage() {
           : null,
       ].filter(Boolean) as { label: string; value: string }[]
     : [];
-  const stats = isCoachProfile
+  const stats: { label: string; value: string; icon: any; badge?: string }[] = isCoachProfile
     ? [
         {
           label: "Highlights",
@@ -468,6 +468,7 @@ export default function ProfilePage() {
         label: "Points",
         value: userProfile?.points !== undefined ? `${userProfile.points}` : "0",
         icon: Star,
+        badge: "BETA",
       }
     );
   }
@@ -691,6 +692,11 @@ export default function ProfilePage() {
                     <Icon className="w-5 h-5 text-[#3B82F6] mx-auto mb-2" />
                     <p className="text-xs text-slate-500 mb-1">{stat.label}</p>
                     <p className="text-[#0F172A] font-medium">{stat.value}</p>
+                    {stat.badge && (
+                      <span className="mt-1 inline-flex items-center justify-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                        {stat.badge}
+                      </span>
+                    )}
                   </div>
                 );
               })}

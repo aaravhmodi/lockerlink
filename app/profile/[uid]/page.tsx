@@ -325,6 +325,11 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
                         {card.label}
                       </p>
                       <p className="text-xl font-semibold text-[#111827]">{card.value}</p>
+                      {card.label === "Points" && (
+                        <span className="mt-1 inline-flex items-center justify-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                          BETA
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
