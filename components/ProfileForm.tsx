@@ -696,9 +696,18 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
             value={formData.city}
             onChange={(e) => setFormData({ ...formData, city: e.target.value })}
             required
-            placeholder="e.g., Milton"
+            placeholder={isCoach ? "e.g., Peel Region" : "e.g., Milton"}
             className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
           />
+          {!isCoach ? (
+            <p className="mt-1 text-xs text-[#6B7280]">
+              Use the city where you live (e.g., Milton). Keep your team or club name in the Team field.
+            </p>
+          ) : (
+            <p className="mt-1 text-xs text-[#6B7280]">
+              List the region you recruit from (e.g., GTA, Peel Region).
+            </p>
+          )}
         </div>
       </div>
 
