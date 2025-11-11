@@ -55,6 +55,7 @@ interface UserProfile {
   division?: string;
   coachMessage?: string;
   ogLockerLinkUser?: boolean;
+  hasHighlight?: boolean;
 }
 
 interface Highlight {
@@ -136,13 +137,15 @@ export default function ProfilePage() {
   const [profileWasIncomplete, setProfileWasIncomplete] = useState(false);
   const [submitHighlightToChallenge, setSubmitHighlightToChallenge] = useState(false);
   const [deletingHighlightId, setDeletingHighlightId] = useState<string | null>(null);
+  const [hasHighlight, setHasHighlight] = useState(false);
+  const [profileFieldsComplete, setProfileFieldsComplete] = useState(false);
 
-  // Auto-show edit form if profile is incomplete
+  // Auto-show edit form until required profile fields are complete
   useEffect(() => {
-    if (!loading && !profileLoading && !profileStatusLoading && !isComplete) {
+    if (!loading && !profileLoading && !profileStatusLoading && !profileFieldsComplete) {
       setShowEditForm(true);
     }
-  }, [loading, profileLoading, profileStatusLoading, isComplete]);
+  }, [loading, profileLoading, profileStatusLoading, profileFieldsComplete]);
 
   useEffect(() => {
     if (loading || profileStatusLoading) {
@@ -206,6 +209,25 @@ export default function ProfilePage() {
       if (userDocExists) {
         const data = userDoc.data();
         userData = data;
+        const isCoachDoc = data.userType === "coach";
+        const fieldsComplete =
+          data.username &&
+          data.name &&
+          data.userType &&
+          (isCoachDoc
+            ? data.team && data.city
+            : data.team &&
+              data.city &&
+              data.position &&
+              data.sport &&
+              data.ageGroup &&
+              data.birthMonth &&
+              data.birthYear &&
+              data.height &&
+              data.vertical &&
+              data.weight);
+        setProfileFieldsComplete(!!fieldsComplete);
+        setHasHighlight(!!data.hasHighlight);
         const ageGroup =
           data.ageGroup ||
           (typeof data.age === "number"
@@ -243,7 +265,12 @@ export default function ProfilePage() {
           coachMessage: data.coachMessage,
           points: typeof data.points === "number" ? data.points : 0,
           ogLockerLinkUser: data.ogLockerLinkUser ?? true,
+          hasHighlight: data.hasHighlight,
         });
+      } else {
+        setProfileFieldsComplete(false);
+        setHasHighlight(false);
+        setUserProfile(null);
       }
 
       // Fetch user's highlights from Firestore
@@ -263,6 +290,7 @@ export default function ProfilePage() {
           };
         }) as Highlight[];
         setHighlights(userHighlights);
+        setHasHighlight(userHighlights.length > 0);
 
         if (userDocExists) {
           const hasHighlightFlag = !!userData?.hasHighlight;
@@ -291,6 +319,7 @@ export default function ProfilePage() {
           // Sort client-side
           userHighlights.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
           setHighlights(userHighlights);
+          setHasHighlight(userHighlights.length > 0);
 
           if (userDocExists) {
             const hasHighlightFlag = !!userData?.hasHighlight;
@@ -303,6 +332,7 @@ export default function ProfilePage() {
         } else {
           console.error("Error fetching highlights:", queryError);
           setHighlights([]);
+          setHasHighlight(false);
         }
       }
     } catch (error) {
@@ -329,6 +359,9 @@ export default function ProfilePage() {
 
       if (remainingHighlights.length === 0) {
         await setDoc(doc(db, "users", user.uid), { hasHighlight: false }, { merge: true });
+        setHasHighlight(false);
+      } else {
+        setHasHighlight(true);
       }
     } catch (error) {
       console.error("Error deleting highlight:", error);
@@ -376,6 +409,7 @@ export default function ProfilePage() {
       });
 
       await setDoc(doc(db, "users", user.uid), { hasHighlight: true }, { merge: true });
+      setHasHighlight(true);
 
       setVideoFile(null);
       setThumbnailFile(null);
@@ -590,6 +624,35 @@ export default function ProfilePage() {
           </motion.div>
         )}
       </div>
+
+      {profileFieldsComplete && !hasHighlight && (
+        <div className="max-w-2xl mx-auto px-4 pt-4">
+          <div className="flex flex-col gap-3 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-amber-100 px-5 py-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 flex items-center justify-center rounded-full bg-amber-400 text-white">
+                <Play className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-[#92400E]">Almost there!</h3>
+                <p className="text-xs text-[#B45309]">
+                  Upload a highlight clip (even a quick 5-second video) to finish unlocking the rest of LockerLink.
+                </p>
+              </div>
+            </div>
+            <div>
+              <button
+                onClick={() => {
+                  setSubmitHighlightToChallenge(false);
+                  setShowUploadModal(true);
+                }}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#F59E0B] px-4 py-2 text-xs font-semibold text-white shadow hover:bg-[#d97706] transition-colors"
+              >
+                Upload Highlight
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Profile banner */}
       <div className="bg-gradient-to-br from-[#3B82F6] to-[#2563EB] h-32" />
