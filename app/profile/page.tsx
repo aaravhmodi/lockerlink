@@ -870,7 +870,7 @@ export default function ProfilePage() {
           )}
         </div>
         {highlights.length > 0 ? (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {highlights.map((highlight, index) => {
               const isDeleting = deletingHighlightId === highlight.id;
               return (
@@ -885,7 +885,7 @@ export default function ProfilePage() {
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: index * 0.05 }}
-                    className="relative aspect-square bg-slate-100 rounded-2xl overflow-hidden group cursor-pointer"
+                    className="relative aspect-[4/5] sm:aspect-square bg-slate-100 rounded-2xl overflow-hidden group cursor-pointer"
                   >
                     {highlight.thumbnailURL ? (
                       <Image
