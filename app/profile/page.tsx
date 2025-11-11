@@ -625,7 +625,7 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {profileFieldsComplete && !hasHighlight && (
+      {profileFieldsComplete && !hasHighlight && !isCoachProfile && (
         <div className="max-w-2xl mx-auto px-4 pt-4">
           <div className="flex flex-col gap-3 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-amber-100 px-5 py-4 shadow-sm">
             <div className="flex items-center gap-3">
