@@ -54,11 +54,28 @@ export default function HighlightsPage() {
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadDescription, setUploadDescription] = useState("");
   const [submitToChallenge, setSubmitToChallenge] = useState(true);
+  const [userType, setUserType] = useState<"athlete" | "coach" | "">("");
 
   useEffect(() => {
     if (!user) return;
     loadData();
   }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      setUserType("");
+      return;
+    }
+
+    const unsubscribe = onSnapshot(doc(db, "users", user.uid), (snapshot) => {
+      const data = snapshot.data();
+      setUserType((data?.userType as "athlete" | "coach") || "athlete");
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const isCoach = userType === "coach";
 
   const loadData = async () => {
     if (!user) return;
@@ -135,7 +152,7 @@ export default function HighlightsPage() {
   }, [user]);
 
   const handleUpload = async () => {
-    if (!user || !videoFile || !uploadTitle.trim() || uploading) return;
+    if (!user || isCoach || !videoFile || !uploadTitle.trim() || uploading) return;
 
     setUploading(true);
     try {
@@ -288,24 +305,30 @@ export default function HighlightsPage() {
 
         {/* Upload section */}
         <div className="max-w-2xl mx-auto px-4 py-6">
-          <motion.div
-            whileHover={{ scale: 1.01 }}
-          onClick={() => {
-            setSubmitToChallenge(true);
-            setShowUploadModal(true);
-          }}
-            className="bg-gradient-to-br from-[#FACC15] to-[#F59E0B] rounded-2xl p-6 shadow-lg cursor-pointer"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-                <Upload className="w-7 h-7 text-white" />
+          {!isCoach ? (
+            <motion.div
+              whileHover={{ scale: 1.01 }}
+              onClick={() => {
+                setSubmitToChallenge(true);
+                setShowUploadModal(true);
+              }}
+              className="bg-gradient-to-br from-[#FACC15] to-[#F59E0B] rounded-2xl p-6 shadow-lg cursor-pointer"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                  <Upload className="w-7 h-7 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-white mb-1 font-semibold">Submit Your Highlight</h3>
+                  <p className="text-amber-100 text-sm">Upload your best block and win prizes!</p>
+                </div>
               </div>
-              <div className="flex-1">
-                <h3 className="text-white mb-1 font-semibold">Submit Your Highlight</h3>
-                <p className="text-amber-100 text-sm">Upload your best block and win prizes!</p>
-              </div>
+            </motion.div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-white/40 bg-white/10 p-6 text-sm text-white/80">
+              Coaches can view and react to highlights here. Use the Home or Explore feeds to share posts, training tips, videos, or links with athletes.
             </div>
-          </motion.div>
+          )}
         </div>
 
         {/* Top Highlights */}
@@ -460,7 +483,7 @@ export default function HighlightsPage() {
         )}
 
         {/* Upload Modal */}
-        {showUploadModal && (
+      {showUploadModal && !isCoach && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
