@@ -52,7 +52,7 @@ export default function ProfileGuard({ children }: ProfileGuardProps) {
           </svg>
           <h2 className="text-xl font-semibold text-[#111827] mb-2">Complete Your Profile</h2>
           <p className="text-[#6B7280] mb-4">
-            Finish setting up your profile to unlock Explore, Match, Messages, and Highlights.
+            Finish setting up your profile and upload a highlight to unlock Explore, Match, Messages, and Highlights.
           </p>
           <button
             onClick={() => router.push("/profile")}

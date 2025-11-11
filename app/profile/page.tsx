@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
 import { useProfileComplete } from "@/hooks/useProfileComplete";
-import { doc, getDoc, collection, query, where, orderBy, getDocs, addDoc, serverTimestamp, onSnapshot, limit, deleteDoc } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, orderBy, getDocs, addDoc, serverTimestamp, onSnapshot, limit, deleteDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Navbar from "@/components/Navbar";
 import ProfileForm from "@/components/ProfileForm";
@@ -201,8 +201,11 @@ export default function ProfilePage() {
     setProfileLoading(true);
     try {
       const userDoc = await getDoc(doc(db, "users", user.uid));
-      if (userDoc.exists()) {
+      const userDocExists = userDoc.exists();
+      let userData: any = null;
+      if (userDocExists) {
         const data = userDoc.data();
+        userData = data;
         const ageGroup =
           data.ageGroup ||
           (typeof data.age === "number"
@@ -260,6 +263,15 @@ export default function ProfilePage() {
           };
         }) as Highlight[];
         setHighlights(userHighlights);
+
+        if (userDocExists) {
+          const hasHighlightFlag = !!userData?.hasHighlight;
+          if (userHighlights.length > 0 && !hasHighlightFlag) {
+            await setDoc(doc(db, "users", user.uid), { hasHighlight: true }, { merge: true });
+          } else if (userHighlights.length === 0 && userData?.hasHighlight) {
+            await setDoc(doc(db, "users", user.uid), { hasHighlight: false }, { merge: true });
+          }
+        }
       } catch (queryError: any) {
         // If index doesn't exist, try without orderBy
         if (queryError.code === 'failed-precondition') {
@@ -279,6 +291,15 @@ export default function ProfilePage() {
           // Sort client-side
           userHighlights.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
           setHighlights(userHighlights);
+
+          if (userDocExists) {
+            const hasHighlightFlag = !!userData?.hasHighlight;
+            if (userHighlights.length > 0 && !hasHighlightFlag) {
+              await setDoc(doc(db, "users", user.uid), { hasHighlight: true }, { merge: true });
+            } else if (userHighlights.length === 0 && userData?.hasHighlight) {
+              await setDoc(doc(db, "users", user.uid), { hasHighlight: false }, { merge: true });
+            }
+          }
         } else {
           console.error("Error fetching highlights:", queryError);
           setHighlights([]);
@@ -302,7 +323,13 @@ export default function ProfilePage() {
     setDeletingHighlightId(highlightId);
     try {
       await deleteDoc(doc(db, "highlights", highlightId));
-      setHighlights((prev) => prev.filter((highlight) => highlight.id !== highlightId));
+
+      const remainingHighlights = highlights.filter((highlight) => highlight.id !== highlightId);
+      setHighlights(remainingHighlights);
+
+      if (remainingHighlights.length === 0) {
+        await setDoc(doc(db, "users", user.uid), { hasHighlight: false }, { merge: true });
+      }
     } catch (error) {
       console.error("Error deleting highlight:", error);
       alert("Failed to delete highlight. Please try again.");
@@ -347,6 +374,8 @@ export default function ProfilePage() {
         challengeId: submitHighlightToChallenge ? DEFAULT_CHALLENGE_ID : "",
         submittedToChallenge: submitHighlightToChallenge,
       });
+
+      await setDoc(doc(db, "users", user.uid), { hasHighlight: true }, { merge: true });
 
       setVideoFile(null);
       setThumbnailFile(null);

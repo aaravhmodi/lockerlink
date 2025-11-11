@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useUser } from "@/hooks/useUser";
-import { collection, query, orderBy, limit, addDoc, serverTimestamp, doc, updateDoc, increment, onSnapshot, arrayUnion, arrayRemove, getDoc } from "firebase/firestore";
+import { collection, query, orderBy, limit, addDoc, serverTimestamp, doc, updateDoc, increment, onSnapshot, arrayUnion, arrayRemove, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Navbar from "@/components/Navbar";
 import ProfileGuard from "@/components/ProfileGuard";
@@ -175,6 +175,8 @@ export default function HighlightsPage() {
         challengeId: submitToChallenge ? currentChallenge?.id || "" : "",
         submittedToChallenge: submitToChallenge,
       });
+
+      await setDoc(doc(db, "users", user.uid), { hasHighlight: true }, { merge: true });
 
       setVideoFile(null);
       setThumbnailFile(null);

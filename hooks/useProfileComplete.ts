@@ -51,7 +51,8 @@ export function useProfileComplete() {
               data.vertical &&
               data.weight);
 
-        setIsComplete(!!hasRequiredFields);
+        const hasHighlight = !!data.hasHighlight;
+        setIsComplete(!!hasRequiredFields && hasHighlight);
         setLoading(false);
       },
       (error) => {
