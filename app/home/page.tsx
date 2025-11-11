@@ -582,20 +582,22 @@ export default function HomePage() {
               <motion.div
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="relative overflow-hidden rounded-3xl border border-amber-200 bg-gradient-to-br from-white via-amber-50 to-amber-100 px-5 py-4 shadow-sm"
+                className="flex items-center justify-between gap-3 rounded-3xl border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-amber-100 px-5 py-4 shadow-sm relative overflow-hidden"
               >
-                <div className="absolute -top-6 -right-6 h-20 w-20 rounded-full bg-amber-200/60 blur-2xl" />
+                <div className="absolute -top-8 -right-10 h-24 w-24 rounded-full bg-amber-200/60 blur-3xl" />
                 <div className="relative flex items-center gap-3">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-400 text-white shadow-inner">
                     <MessageCircle className="w-6 h-6" />
                   </div>
-                  <div className="flex-1">
+                  <div>
                     <h3 className="text-sm sm:text-base font-semibold text-[#92400E]">Drop Feedback</h3>
                     <p className="text-xs sm:text-sm text-[#B45309]">
                       Quick bubble to share what you love or want next in LockerLink.
                     </p>
                   </div>
-                  <Sparkles className="w-5 h-5 text-amber-500" />
+                </div>
+                <div className="relative hidden sm:flex items-center justify-center rounded-full bg-amber-400 text-white p-3 shadow">
+                  <ArrowRight className="w-4 h-4" />
                 </div>
               </motion.div>
             </Link>
