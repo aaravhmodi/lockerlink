@@ -481,75 +481,85 @@ export default function HomePage() {
               transition={{ delay: 0.3 }}
               className="mb-6"
             >
-              <h2 className="text-[#0F172A] font-semibold mb-4 text-lg">Latest Highlights</h2>
-              <div className="bg-white rounded-2xl shadow-md overflow-hidden border border-slate-200">
-                {/* Featured Highlight Card */}
-                <div className="p-4">
-                    {/* User Info */}
-                    <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-[#0F172A] font-semibold text-lg">Latest Highlights</h2>
+                <Link href="/highlights" className="text-sm font-semibold text-[#3B82F6] hover:underline">
+                  View all
+                </Link>
+                </div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                {topHighlights.slice(0, 3).map((highlight, index) => (
+                  <motion.div
+                    key={highlight.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.05 * index }}
+                    className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col"
+                  >
+                    <Link
+                      href={{
+                        pathname: `/highlights/${highlight.id}`,
+                        query: { returnUrl: "/home" },
+                      }}
+                    >
+                      <div className="relative aspect-video bg-slate-100 overflow-hidden group">
+                        {highlight.thumbnailURL ? (
+                          <Image
+                            src={highlight.thumbnailURL}
+                            alt={highlight.title}
+                            fill
+                            className="object-cover transition-transform duration-300 group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-300">
+                            <Play className="w-12 h-12 text-slate-400" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90">
+                            <Play className="w-6 h-6 text-[#3B82F6] ml-0.5" />
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                    <div className="p-4 flex flex-col gap-2 flex-1">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-gradient-to-br from-[#3B82F6] to-[#2563EB] rounded-full flex items-center justify-center text-white font-semibold">
-                          {topHighlights[0]?.userName
-                            ? topHighlights[0].userName
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#3B82F6] to-[#2563EB] text-white font-semibold">
+                          {highlight.userName
+                            ? highlight.userName
                                 .split(" ")
                                 .map((n: string) => n[0])
                                 .join("")
                             : "PL"}
                         </div>
                         <div>
-                          <h4 className="font-semibold text-[#0F172A]">{topHighlights[0]?.userName || "Player"}</h4>
-                          {topHighlights[0]?.userPosition && (
-                            <p className="text-sm text-slate-500">{topHighlights[0].userPosition}</p>
+                          <h4 className="text-sm font-semibold text-[#0F172A]">
+                            {highlight.userName || "Player"}
+                          </h4>
+                          {highlight.userPosition && (
+                            <p className="text-xs text-slate-500">{highlight.userPosition}</p>
                           )}
                         </div>
                       </div>
-                      <div className="bg-[#FACC15] text-[#0F172A] px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
-                        <Zap className="w-3 h-3" />
-                        Featured
-                      </div>
-                    </div>
-
-                    {/* Video Thumbnail */}
-                    <Link href={`/highlights/${topHighlights[0]?.id || '1'}`}>
-                      <div className="relative aspect-video bg-slate-100 rounded-xl overflow-hidden mb-3 group cursor-pointer">
-                        {topHighlights[0]?.thumbnailURL ? (
-                          <Image
-                            src={topHighlights[0].thumbnailURL}
-                            alt={topHighlights[0]?.title || "Highlight"}
-                            fill
-                            className="object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center">
-                            <Play className="w-16 h-16 text-slate-400" />
-                          </div>
-                        )}
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors">
-                          <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center">
-                            <Play className="w-8 h-8 text-[#3B82F6] ml-1" fill="currentColor" />
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-
-                    {/* Video Info */}
-                    <div>
-                      <h3 className="font-semibold text-[#0F172A] mb-2">
-                        {topHighlights[0]?.title || "Highlight"}
-                      </h3>
-                      <div className="flex items-center gap-4 text-slate-600 text-sm">
-                        <div className="flex items-center gap-1">
-                          <Heart className="w-4 h-4" />
-                          <span>{topHighlights[0]?.upvotes ?? 0}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <MessageCircle className="w-4 h-4" />
-                          <span>{topHighlights[0]?.commentsCount ?? 0}</span>
+                      <div className="space-y-2 flex-1">
+                        <h3 className="text-sm font-semibold text-[#0F172A] leading-tight">
+                          {highlight.title || "Highlight"}
+                        </h3>
+                        <div className="flex items-center gap-4 text-xs text-slate-500">
+                          <span className="flex items-center gap-1">
+                            <Heart className="w-3 h-3" />
+                            {highlight.upvotes ?? 0}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <MessageCircle className="w-3 h-3" />
+                            {highlight.commentsCount ?? 0}
+                          </span>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  </motion.div>
+                ))}
+              </div>
             </motion.div>
           )}
 

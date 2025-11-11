@@ -15,6 +15,7 @@ import {
   orderBy,
   arrayUnion,
   arrayRemove,
+  deleteDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Navbar from "@/components/Navbar";
@@ -23,6 +24,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Heart, MessageCircle, Share2, Play, Trophy } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 
 interface Highlight {
   id: string;
@@ -64,6 +66,13 @@ export default function HighlightViewerPage({ params }: { params: Promise<{ id: 
   const [comments, setComments] = useState<HighlightComment[]>([]);
   const [commentText, setCommentText] = useState("");
   const [addingComment, setAddingComment] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnUrlParam = searchParams.get("returnUrl");
+  const decodedReturnUrl = returnUrlParam ? decodeURIComponent(returnUrlParam) : null;
+  const safeReturnUrl = decodedReturnUrl && decodedReturnUrl.startsWith("/") ? decodedReturnUrl : null;
 
   useEffect(() => {
     if (!highlightId) return;
@@ -184,6 +193,37 @@ export default function HighlightViewerPage({ params }: { params: Promise<{ id: 
     }
   };
 
+  const handleGoBack = () => {
+    if (safeReturnUrl) {
+      router.push(safeReturnUrl);
+      return;
+    }
+    router.back();
+  };
+
+  const handleDeleteHighlight = async () => {
+    if (!highlight || !user || highlight.userId !== user.uid || deleting) return;
+
+    const confirmDelete = window.confirm("Delete this highlight? This can’t be undone.");
+    if (!confirmDelete) return;
+
+    setDeleting(true);
+    try {
+      await deleteDoc(doc(db, "highlights", highlight.id));
+
+      if (safeReturnUrl) {
+        router.push(safeReturnUrl);
+      } else {
+        router.push("/highlights");
+      }
+    } catch (error) {
+      console.error("Error deleting highlight:", error);
+      alert("Failed to delete highlight. Please try again.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <ProfileGuard>
@@ -224,22 +264,31 @@ export default function HighlightViewerPage({ params }: { params: Promise<{ id: 
     <ProfileGuard>
       <div className="min-h-screen bg-[#0F172A] pb-20 md:pb-0">
         <Navbar />
+        <div className="max-w-4xl mx-auto px-4 pt-6 flex items-center justify-between gap-3">
+          <motion.button
+            onClick={handleGoBack}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </motion.button>
+          {highlight?.userId === user?.uid && (
+            <motion.button
+              onClick={handleDeleteHighlight}
+              disabled={deleting}
+              whileHover={{ scale: deleting ? 1 : 1.05 }}
+              whileTap={{ scale: deleting ? 1 : 0.95 }}
+              className="inline-flex items-center gap-2 rounded-full bg-[#F43F5E] px-4 py-2 text-sm font-semibold text-white shadow hover:bg-[#e11d48] disabled:opacity-70"
+            >
+              {deleting ? "Deleting..." : "Delete Highlight"}
+            </motion.button>
+          )}
+        </div>
         
         {/* Video Player Section */}
         <div className="relative w-full bg-black">
-          {/* Back Button */}
-          <div className="absolute top-4 left-4 z-20">
-            <Link href="/highlights">
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                className="w-10 h-10 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/70 transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </motion.button>
-            </Link>
-          </div>
-
           {/* Video Container */}
           <div className="relative aspect-video w-full max-w-4xl mx-auto">
             {highlight.videoURL ? (

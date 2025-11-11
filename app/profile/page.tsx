@@ -797,7 +797,13 @@ export default function ProfilePage() {
             {highlights.map((highlight, index) => {
               const isDeleting = deletingHighlightId === highlight.id;
               return (
-                <Link key={highlight.id} href={`/highlights/${highlight.id}`}>
+                <Link
+                  key={highlight.id}
+                  href={{
+                    pathname: `/highlights/${highlight.id}`,
+                    query: { returnUrl: "/profile" },
+                  }}
+                >
                   <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
