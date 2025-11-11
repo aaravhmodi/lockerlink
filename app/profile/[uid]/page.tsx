@@ -13,6 +13,7 @@ import { motion } from "framer-motion";
 import { HiChat } from "react-icons/hi";
 import { Play } from "lucide-react";
 import { formatHeight, formatVertical, formatWeight, formatTouch } from "@/utils/formatMetrics";
+import BackButton from "@/components/BackButton";
 
 const MONTH_TO_INDEX: Record<string, number> = {
   January: 0,
@@ -103,12 +104,27 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
   const [profile, setProfile] = useState<ViewedProfile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [highlights, setHighlights] = useState<Highlight[]>([]);
+  const [viewerType, setViewerType] = useState<"athlete" | "coach" | "">("");
 
   useEffect(() => {
     if (!loading && !currentUser) {
       router.push("/");
     }
   }, [currentUser, loading, router]);
+
+  useEffect(() => {
+    if (!currentUser) {
+      setViewerType("");
+      return;
+    }
+
+    const unsubscribe = onSnapshot(doc(db, "users", currentUser.uid), (snapshot) => {
+      const data = snapshot.data();
+      setViewerType((data?.userType as "athlete" | "coach") || "athlete");
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -187,7 +203,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
   }, [uid]);
 
   const handleStartChat = async () => {
-    if (!currentUser || !profile) return;
+    if (!currentUser || !profile || viewerType === "coach") return;
 
     try {
       // Check if chat already exists
@@ -272,6 +288,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
     <div className="min-h-screen bg-[#F9FAFB] pb-20 md:pb-0">
       <Navbar />
       <div className="mx-auto max-w-2xl px-4 sm:px-6 pt-0 pb-4 md:py-4 sm:py-8">
+        <BackButton fallback="/home" className="mb-4" />
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -297,7 +314,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
               </div>
             </div>
 
-            {!isOwnProfile && (
+            {!isOwnProfile && viewerType !== "coach" && (
               <motion.button
                 onClick={handleStartChat}
                 whileHover={{ scale: 1.02 }}
@@ -344,7 +361,13 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
                     </span>
                   )}
                   {profile.userType && (
-                    <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-600">
+                    <span
+                      className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                        profile.userType === "coach"
+                          ? "bg-emerald-50 border-emerald-200 text-emerald-600"
+                          : "bg-blue-50 border-blue-200 text-blue-600 hidden sm:inline-flex"
+                      }`}
+                    >
                       {profile.userType === "coach" ? "Coach" : "Athlete"}
                     </span>
                   )}

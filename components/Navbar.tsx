@@ -68,6 +68,13 @@ export default function Navbar() {
   }, [isComplete]);
 
   const handleProtectedNavigation = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (isCoach && href === "/messages") {
+      event.preventDefault();
+      router.push("/explore");
+      setShowMenu(false);
+      return;
+    }
+
     if (!profileLoading && !isComplete && href !== "/profile") {
       event.preventDefault();
       triggerProfileReminder();
@@ -105,8 +112,8 @@ export default function Navbar() {
   const navItems = isCoach
     ? [
         { href: "/home", label: "Home", icon: HiHome },
+        { href: "/explore", label: "Explore", icon: HiSearch },
         { href: "/coach", label: "Coach", icon: HiInformationCircle },
-        { href: "/messages", label: "Messages", icon: HiChat },
         { href: "/profile", label: "Profile", icon: HiUser },
       ]
     : [

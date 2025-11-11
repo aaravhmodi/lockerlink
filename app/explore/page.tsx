@@ -14,6 +14,7 @@ import FeedCard from "@/components/FeedCard";
 import { motion } from "framer-motion";
 import { HiSearch } from "react-icons/hi";
 import { Heart, MessageCircle, Play } from "lucide-react";
+import BackButton from "@/components/BackButton";
 
 interface User {
   id: string;
@@ -200,6 +201,7 @@ export default function ExplorePage() {
       <div className="min-h-screen bg-[#F9FAFB] pb-20 md:pb-0">
         <Navbar />
       <div className="mx-auto max-w-6xl px-4 sm:px-6 pt-0 pb-4 md:py-4 sm:py-8">
+        <BackButton fallback="/home" className="mb-4" />
         <motion.h1
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}

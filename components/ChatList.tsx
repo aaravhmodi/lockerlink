@@ -235,7 +235,7 @@ export default function ChatList({ searchTerm = "" }: ChatListProps) {
                           className={`flex-shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
                             chat.otherUserType === "coach"
                               ? "bg-emerald-50 border-emerald-200 text-emerald-600"
-                              : "bg-blue-50 border-blue-200 text-blue-600"
+                              : "bg-blue-50 border-blue-200 text-blue-600 hidden sm:inline-flex"
                           }`}
                         >
                           {chat.otherUserType === "coach" ? "Coach" : "Athlete"}

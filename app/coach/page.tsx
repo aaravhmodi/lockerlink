@@ -10,6 +10,7 @@ import ProfileGuard from "@/components/ProfileGuard";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import BackButton from "@/components/BackButton";
 
 interface PlayerSummary {
   id: string;
@@ -110,6 +111,7 @@ export default function CoachDashboardPage() {
         <Navbar />
 
         <main className="mx-auto max-w-5xl px-4 sm:px-6 pt-6 sm:pt-10">
+          <BackButton fallback="/home" className="mb-6" />
           <div className="mb-8">
             <h1 className="text-3xl font-semibold text-[#0F172A] mb-2">Coach Dashboard</h1>
             <p className="text-[#475569] max-w-2xl">

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
 import { db, auth } from "@/lib/firebase";
-import { collection, addDoc, query, getDocs, where, serverTimestamp, onSnapshot } from "firebase/firestore";
+import { collection, addDoc, query, getDocs, where, serverTimestamp, onSnapshot, doc } from "firebase/firestore";
 import Navbar from "@/components/Navbar";
 import ProfileGuard from "@/components/ProfileGuard";
 import ChatList from "@/components/ChatList";
@@ -34,6 +34,7 @@ export default function MessagesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [modalSearchQuery, setModalSearchQuery] = useState("");
   const [searching, setSearching] = useState(false);
+  const [userType, setUserType] = useState<"athlete" | "coach" | "">("");
 
   // Debounced search for modal users
   useEffect(() => {
@@ -77,6 +78,26 @@ export default function MessagesPage() {
 
     return () => clearTimeout(timeoutId);
   }, [user, showCreateModal, modalSearchQuery]);
+
+  useEffect(() => {
+    if (!user) {
+      setUserType("");
+      return;
+    }
+
+    const unsubscribe = onSnapshot(doc(db, "users", user.uid), (snapshot) => {
+      const data = snapshot.data();
+      setUserType((data?.userType as "athlete" | "coach") || "athlete");
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  useEffect(() => {
+    if (!loading && userType === "coach") {
+      router.replace("/explore");
+    }
+  }, [loading, userType, router]);
 
   // Reset modal search when modal closes
   const handleCloseModal = () => {
@@ -125,6 +146,19 @@ export default function MessagesPage() {
       alert(`Error creating chat: ${error.message || "Please try again."}`);
     }
   };
+
+  if (!user || userType === "coach") {
+    return (
+      <ProfileGuard>
+        <div className="min-h-screen bg-white pb-20 md:pb-0">
+          <Navbar />
+          <div className="max-w-2xl mx-auto px-4 py-12 text-center text-[#6B7280]">
+            Redirecting to Explore...
+          </div>
+        </div>
+      </ProfileGuard>
+    );
+  }
 
   return (
     <ProfileGuard>

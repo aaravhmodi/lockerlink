@@ -31,6 +31,7 @@ import { uploadImageToCloudinary, uploadVideoToCloudinary } from "@/utils/upload
 import { formatHeight, formatVertical, formatWeight, formatTouch } from "@/utils/formatMetrics";
 import FeedCard from "@/components/FeedCard";
 import ManagePostsModal from "@/components/ManagePostsModal";
+import BackButton from "@/components/BackButton";
 
 interface UserProfile {
   name: string;
@@ -563,6 +564,7 @@ export default function ProfilePage() {
       <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white pb-20 md:pb-0">
         <Navbar />
         <div className="mx-auto max-w-2xl px-4 sm:px-6 py-6 sm:py-12">
+          <BackButton fallback="/home" className="mb-6" />
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -594,6 +596,10 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white pb-20 md:pb-0">
       <Navbar />
+
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-4">
+        <BackButton fallback="/home" className="mb-4" />
+      </div>
       
       {/* Header with settings */}
       <div className="bg-white border-b border-slate-200 sticky top-14 md:static md:top-0 z-40">
@@ -711,7 +717,13 @@ export default function ProfilePage() {
                   </div>
                 )}
                 {userProfile?.userType && (
-                  <div className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-sm font-medium border border-emerald-100">
+                  <div
+                    className={`px-3 py-1 rounded-full text-sm font-medium border ${
+                      userProfile.userType === "coach"
+                        ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                        : "bg-blue-50 text-blue-600 border-blue-100 hidden sm:inline-flex"
+                    }`}
+                  >
                     {userProfile.userType === "coach" ? "Coach" : "Athlete"}
                   </div>
                 )}

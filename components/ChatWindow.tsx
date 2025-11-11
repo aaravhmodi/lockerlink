@@ -304,7 +304,7 @@ export default function ChatWindow({ chatId }: ChatWindowProps) {
                 className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
                   otherUser.userType === "coach"
                     ? "bg-emerald-50 border-emerald-200 text-emerald-600"
-                    : "bg-blue-50 border-blue-200 text-blue-600"
+                    : "bg-blue-50 border-blue-200 text-blue-600 hidden sm:inline-flex"
                 }`}
               >
                 {otherUser.userType === "coach" ? "Coach" : "Athlete"}
