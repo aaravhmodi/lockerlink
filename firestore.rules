@@ -1,6 +1,22 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth.uid != null;
+    }
+
+    function isHighlightOwner() {
+      return isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    function isHighlightEngagementUpdate() {
+      return isSignedIn() &&
+        resource.data.userId == request.resource.data.userId &&
+        request.resource.data.diff(resource.data).addedKeys().hasOnly([]) &&
+        request.resource.data.diff(resource.data).removedKeys().hasOnly([]) &&
+        request.resource.data.diff(resource.data).changedKeys().hasOnly(["upvotes", "likedBy", "commentsCount", "views"]);
+    }
+
     // User profiles - anyone can read, only owner can write
     match /users/{userId} {
       allow read: if true;
@@ -10,6 +26,20 @@ service cloud.firestore {
     // Posts - authenticated users can read/write
     match /posts/{postId} {
       allow read, write: if request.auth.uid != null;
+    }
+
+    // Highlights
+    match /highlights/{highlightId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isHighlightOwner() || isHighlightEngagementUpdate();
+      allow delete: if isHighlightOwner();
+
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+        allow update, delete: if isSignedIn() && request.auth.uid == resource.data.userId;
+      }
     }
     
     // Chats - participants can read, authenticated users can create

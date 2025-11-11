@@ -161,8 +161,10 @@ export default function HomePage() {
         return {
           id: docSnap.id,
           userName: data.userName || "Player",
+          userPosition: data.userPosition || "",
           title: data.title || "Highlight",
           upvotes: data.upvotes || 0,
+          commentsCount: data.commentsCount || 0,
           rank: index + 1,
           thumbnailURL: data.thumbnailURL || "",
         } as Highlight;
