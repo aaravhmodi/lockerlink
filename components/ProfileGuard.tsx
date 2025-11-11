@@ -15,7 +15,7 @@ export default function ProfileGuard({ children }: ProfileGuardProps) {
   const { user, loading: userLoading } = useUser();
   const { isComplete, loading: profileLoading } = useProfileComplete();
   const router = useRouter();
-  const [userType, setUserType] = useState<"athlete" | "coach" | "">("");
+  const [userType, setUserType] = useState<"athlete" | "coach" | "admin" | "">("");
 
   useEffect(() => {
     if (!userLoading && !profileLoading) {
@@ -40,7 +40,7 @@ export default function ProfileGuard({ children }: ProfileGuardProps) {
       doc(db, "users", user.uid),
       (snapshot) => {
         const data = snapshot.data();
-        setUserType((data?.userType as "athlete" | "coach") || "");
+        setUserType((data?.userType as "athlete" | "coach" | "admin") || "");
       },
       () => setUserType("")
     );

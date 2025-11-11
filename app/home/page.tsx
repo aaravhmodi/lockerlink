@@ -19,7 +19,7 @@ interface UserProfile {
   name: string;
   username?: string;
   photoURL?: string;
-  userType?: "athlete" | "coach";
+  userType?: "athlete" | "coach" | "admin";
 }
 
 interface Match {
@@ -140,7 +140,7 @@ export default function HomePage() {
           name: data.name || "Player",
           username: data.username,
           photoURL: data.photoURL,
-          userType: (data.userType as "athlete" | "coach") || "athlete",
+          userType: (data.userType as "athlete" | "coach" | "admin") || "athlete",
         });
       }
 
@@ -315,8 +315,9 @@ export default function HomePage() {
             className="mb-6"
           >
             {(() => {
-              const isCoach = userProfile?.userType === "coach";
-              const persona = isCoach
+  const isCoach = userProfile?.userType === "coach";
+  const isAdmin = userProfile?.userType === "admin";
+              const persona = userProfile?.userType === "coach"
                 ? {
                     emoji: "🧢",
                     title: "Coach View",
@@ -345,6 +346,37 @@ export default function HomePage() {
                       },
                     ],
                     outro: "LockerLink makes it simple to mentor players, reinforce culture, and inspire the next generation.",
+                  }
+                : userProfile?.userType === "admin"
+                ? {
+                    emoji: "📋",
+                    title: "Club Admin View",
+                    intro: "Use LockerLink to oversee your players and support their volleyball experience.",
+                    accent: "from-amber-50 via-white to-slate-100",
+                    bullets: [
+                      {
+                        label: "View athlete & coach activity",
+                        description: "Stay informed with access to shared highlights, posts, and updates across your club.",
+                        icon: Users,
+                      },
+                      {
+                        label: "Monitor progress safely",
+                        description: "Follow each athlete’s growth through their profile stats, achievements, and highlights.",
+                        icon: Sparkles,
+                      },
+                      {
+                        label: "Keep communications transparent",
+                        description: "Spot-check coach and athlete interactions to ensure conversations stay positive and compliant.",
+                        icon: MessageCircle,
+                      },
+                      {
+                        label: "Support development",
+                        description: "Organize information, offer encouragement, and help coordinate training or events.",
+                        icon: Trophy,
+                      },
+                    ],
+                    outro:
+                      "LockerLink gives club admins and parents a clear view of the volleyball community—keeping athletes supported, informed, and protected as they grow in the game.",
                   }
                 : {
                     emoji: "🏐",

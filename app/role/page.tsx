@@ -25,6 +25,14 @@ const ROLE_OPTIONS = [
     icon: Users,
     welcome: "Welcome to the LockerLink bench. Time to lead the next generation!",
   },
+  {
+    type: "admin" as const,
+    title: "I'm an Admin / Parent",
+    subtitle: "Keep a clear view on players you support and help them thrive.",
+    accent: "from-amber-100 via-white to-slate-100",
+    icon: Star,
+    welcome: "Welcome to the LockerLink stands. Thanks for cheering and keeping players safe!",
+  },
 ] as const;
 
 export default function RoleSelectPage() {
@@ -69,7 +77,7 @@ export default function RoleSelectPage() {
     fetchRole();
   }, [user, router]);
 
-  const handleSelect = async (role: "athlete" | "coach") => {
+  const handleSelect = async (role: "athlete" | "coach" | "admin") => {
     if (!user || saving) return;
     setSaving(true);
     setSelectedRole(role);
@@ -93,6 +101,21 @@ export default function RoleSelectPage() {
           blockTouch: "",
           standingTouch: "",
           spikeTouch: "",
+        });
+      } else if (role === "admin") {
+        Object.assign(update, {
+          height: "",
+          vertical: "",
+          weight: "",
+          ageGroup: "",
+          birthMonth: "",
+          birthYear: "",
+          position: "",
+          secondaryPosition: "",
+          blockTouch: "",
+          standingTouch: "",
+          spikeTouch: "",
+          adminRole: "",
         });
       }
 

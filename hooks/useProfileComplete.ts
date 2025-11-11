@@ -34,25 +34,54 @@ export function useProfileComplete() {
 
         const data = snapshot.data();
         const isCoach = data.userType === "coach";
-        const hasRequiredFields =
-          data.username &&
-          data.name &&
-          data.userType &&
-          (isCoach
-            ? data.team && data.city
-            : data.team &&
-              data.city &&
-              data.position &&
-              data.sport &&
-              data.ageGroup &&
-              data.birthMonth &&
-              data.birthYear &&
-              data.height &&
-              data.vertical &&
-              data.weight);
+        const isAdmin = data.userType === "admin";
+        const hasRequiredFields = (() => {
+          if (isCoach) {
+            return (
+              data.username &&
+              data.name &&
+              data.userType &&
+              data.team &&
+              data.city
+            );
+          }
+
+          if (isAdmin) {
+            const isClubAdmin = data.adminRole === "clubAdmin";
+            return (
+              data.username &&
+              data.name &&
+              data.userType &&
+              data.adminRole &&
+              (!isClubAdmin || data.team)
+            );
+          }
+
+          return (
+            data.username &&
+            data.name &&
+            data.userType &&
+            data.team &&
+            data.city &&
+            data.position &&
+            data.sport &&
+            data.ageGroup &&
+            data.birthMonth &&
+            data.birthYear &&
+            data.height &&
+            data.vertical &&
+            data.weight
+          );
+        })();
 
         const hasHighlight = !!data.hasHighlight;
-        setIsComplete(isCoach ? !!hasRequiredFields : !!hasRequiredFields && hasHighlight);
+        const completeStatus = isCoach
+          ? !!hasRequiredFields
+          : isAdmin
+            ? !!hasRequiredFields
+            : !!hasRequiredFields && hasHighlight;
+
+        setIsComplete(completeStatus);
         setLoading(false);
       },
       (error) => {

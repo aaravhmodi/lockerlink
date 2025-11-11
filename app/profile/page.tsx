@@ -52,11 +52,12 @@ interface UserProfile {
   points?: number;
   photoURL?: string;
   bio?: string;
-  userType?: "athlete" | "coach";
+  userType?: "athlete" | "coach" | "admin";
   division?: string;
   coachMessage?: string;
   ogLockerLinkUser?: boolean;
   hasHighlight?: boolean;
+  adminRole?: "parent" | "clubAdmin" | "";
 }
 
 interface Highlight {
@@ -211,22 +212,46 @@ export default function ProfilePage() {
         const data = userDoc.data();
         userData = data;
         const isCoachDoc = data.userType === "coach";
-        const fieldsComplete =
-          data.username &&
-          data.name &&
-          data.userType &&
-          (isCoachDoc
-            ? data.team && data.city
-            : data.team &&
-              data.city &&
-              data.position &&
-              data.sport &&
-              data.ageGroup &&
-              data.birthMonth &&
-              data.birthYear &&
-              data.height &&
-              data.vertical &&
-              data.weight);
+        const isAdminDoc = data.userType === "admin";
+        const isClubAdminDoc = isAdminDoc && data.adminRole === "clubAdmin";
+        const fieldsComplete = (() => {
+          if (isCoachDoc) {
+            return (
+              data.username &&
+              data.name &&
+              data.userType &&
+              data.team &&
+              data.city
+            );
+          }
+
+          if (isAdminDoc) {
+            return (
+              data.username &&
+              data.name &&
+              data.userType &&
+              data.adminRole &&
+              (!isClubAdminDoc || data.team)
+            );
+          }
+
+          return (
+            data.username &&
+            data.name &&
+            data.userType &&
+            data.team &&
+            data.city &&
+            data.position &&
+            data.sport &&
+            data.ageGroup &&
+            data.birthMonth &&
+            data.birthYear &&
+            data.height &&
+            data.vertical &&
+            data.weight
+          );
+        })();
+
         setProfileFieldsComplete(!!fieldsComplete);
         setHasHighlight(!!data.hasHighlight);
         const ageGroup =
@@ -261,12 +286,13 @@ export default function ProfilePage() {
           spikeTouch: data.spikeTouch,
           photoURL: data.photoURL,
           bio: data.bio,
-          userType: (data.userType as "athlete" | "coach") || "athlete",
+          userType: (data.userType as "athlete" | "coach" | "admin") || "athlete",
           division: data.division,
           coachMessage: data.coachMessage,
           points: typeof data.points === "number" ? data.points : 0,
           ogLockerLinkUser: data.ogLockerLinkUser ?? true,
           hasHighlight: data.hasHighlight,
+          adminRole: (data.adminRole as "parent" | "clubAdmin" | "") || "",
         });
       } else {
         setProfileFieldsComplete(false);
@@ -343,6 +369,11 @@ export default function ProfilePage() {
     }
   };
 
+  const isCoachProfile = userProfile?.userType === "coach";
+  const isAdminProfile = userProfile?.userType === "admin";
+  const isAthleteProfile = userProfile?.userType === "athlete";
+  const isClubAdminProfile = isAdminProfile && userProfile?.adminRole === "clubAdmin";
+
   const handleDeleteHighlight = async (highlightId: string) => {
     if (!user || deletingHighlightId) return;
 
@@ -373,7 +404,7 @@ export default function ProfilePage() {
   };
 
   const handleUpload = async () => {
-    if (!user || isCoachProfile || !videoFile || !uploadTitle.trim() || uploading) return;
+    if (!user || isCoachProfile || isAdminProfile || !videoFile || !uploadTitle.trim() || uploading) return;
 
     setUploading(true);
     try {
@@ -430,7 +461,6 @@ export default function ProfilePage() {
     }
   };
 
-  const isCoachProfile = userProfile?.userType === "coach";
   const coachInfoCards = isCoachProfile
     ? [
         {
@@ -452,7 +482,7 @@ export default function ProfilePage() {
     : [];
   const derivedAge = calculateAge(userProfile?.birthMonth, userProfile?.birthYear);
 
-  const athleteInfoCards = !isCoachProfile
+  const athleteInfoCards = isAthleteProfile
     ? [
         userProfile?.team
           ? {
@@ -480,34 +510,98 @@ export default function ProfilePage() {
           : null,
       ].filter(Boolean) as { label: string; value: string }[]
     : [];
-  const stats: { label: string; value: string; icon: any; badge?: string }[] = isCoachProfile
+  const adminInfoCards = isAdminProfile
     ? [
+        {
+          label: "Role",
+          value: isClubAdminProfile ? "Club Admin" : "Parent / Guardian",
+          icon: Star,
+        },
+        isClubAdminProfile && userProfile?.team
+          ? {
+              label: "Team",
+              value: userProfile.team,
+              icon: Users,
+            }
+          : null,
+        userProfile?.city
+          ? {
+              label: "Region / City",
+              value: userProfile.city,
+              icon: MapPin,
+            }
+          : null,
+      ].filter(Boolean) as { label: string; value: string; icon: any }[]
+    : [];
+
+  const stats: { label: string; value: string; icon: any; badge?: string }[] = (() => {
+    if (isCoachProfile) {
+      return [
         {
           label: "Highlights",
           value: highlights.length.toString(),
           icon: Play,
         },
-      ]
-    : [
         {
-          label: "Height",
-          value: formatHeight(userProfile?.height),
-          icon: TrendingUp,
-        },
-        {
-          label: "Vertical",
-          value: formatVertical(userProfile?.vertical),
-          icon: Sparkles,
-        },
-        {
-          label: "Weight",
-          value: formatWeight(userProfile?.weight),
-          icon: Trophy,
+          label: "Community Posts",
+          value: posts.length.toString(),
+          icon: Users,
         },
       ];
+    }
 
-  if (!isCoachProfile) {
-    stats.push(
+    if (isAdminProfile) {
+      return [
+        {
+          label: "Community Posts",
+          value: posts.length.toString(),
+          icon: Users,
+        },
+        {
+          label: "Highlights",
+          value: highlights.length.toString(),
+          icon: Play,
+        },
+        isClubAdminProfile && userProfile?.team
+          ? {
+              label: "Club",
+              value: userProfile.team,
+              icon: MapPin,
+            }
+          : null,
+      ].filter(Boolean) as { label: string; value: string; icon: any }[];
+    }
+
+    const baseStats = [
+      {
+        label: "Height",
+        value: formatHeight(userProfile?.height),
+        icon: TrendingUp,
+      },
+      {
+        label: "Vertical",
+        value: formatVertical(userProfile?.vertical),
+        icon: Sparkles,
+      },
+      {
+        label: "Weight",
+        value: formatWeight(userProfile?.weight),
+        icon: Trophy,
+      },
+      {
+        label: "Highlights",
+        value: highlights.length.toString(),
+        icon: Play,
+      },
+      {
+        label: "Points",
+        value: userProfile?.points !== undefined ? `${userProfile.points}` : "0",
+        icon: Star,
+        badge: "BETA",
+      },
+    ];
+
+    baseStats.push(
       {
         label: "Block Touch",
         value: formatTouch(userProfile?.blockTouch),
@@ -523,23 +617,16 @@ export default function ProfilePage() {
         value: formatTouch(userProfile?.spikeTouch),
         icon: Zap,
       },
-      {
-        label: "Highlights",
-        value: highlights.length.toString(),
-        icon: Play,
-      },
-      {
-        label: "Points",
-        value: userProfile?.points !== undefined ? `${userProfile.points}` : "0",
-        icon: Star,
-        badge: "BETA",
-      }
     );
-  }
+
+    return baseStats;
+  })();
 
   const statsGridClass = isCoachProfile
     ? "grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4"
-    : "grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4";
+    : isAdminProfile
+      ? "grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4"
+      : "grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4";
 
   if (loading || profileLoading || profileStatusLoading) {
     return (
@@ -631,7 +718,7 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {profileFieldsComplete && !hasHighlight && !isCoachProfile && !isComplete && (
+      {profileFieldsComplete && !hasHighlight && isAthleteProfile && !isComplete && (
         <div className="max-w-2xl mx-auto px-4 pt-4">
           <div className="flex flex-col gap-3 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-amber-100 px-5 py-4 shadow-sm">
             <div className="flex items-center gap-3">
@@ -706,12 +793,12 @@ export default function ProfilePage() {
                     {userProfile.position}
                   </div>
                 )}
-                {!isCoachProfile && userProfile?.secondaryPosition && (
+                {isAthleteProfile && userProfile?.secondaryPosition && (
                   <div className="bg-blue-50 text-[#1D4ED8] px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide mx-auto sm:mx-0">
                     Secondary: {userProfile.secondaryPosition}
                   </div>
                 )}
-                {!isCoachProfile && userProfile?.ageGroup && (
+                {isAthleteProfile && userProfile?.ageGroup && (
                   <div className="bg-blue-50 text-[#3B82F6] px-3 py-1 rounded-full text-sm font-medium border-0 mx-auto sm:mx-0">
                     {userProfile.ageGroup}
                   </div>
@@ -719,12 +806,20 @@ export default function ProfilePage() {
                 {userProfile?.userType && (
                   <div
                     className={`px-3 py-1 rounded-full text-sm font-medium border ${
-                      userProfile.userType === "coach"
+                      isCoachProfile
                         ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                        : isAdminProfile
+                        ? "bg-amber-50 text-amber-700 border-amber-200"
                         : "bg-blue-50 text-blue-600 border-blue-100 hidden sm:inline-flex"
                     }`}
                   >
-                    {userProfile.userType === "coach" ? "Coach" : "Athlete"}
+                    {isCoachProfile
+                      ? "Coach"
+                      : isAdminProfile
+                      ? isClubAdminProfile
+                        ? "Club Admin"
+                        : "Parent / Guardian"
+                      : "Athlete"}
                   </div>
                 )}
               </div>
@@ -732,12 +827,18 @@ export default function ProfilePage() {
           </div>
 
           {/* Bio */}
-          {!isCoachProfile && userProfile?.bio && (
+          {isAthleteProfile && userProfile?.bio && (
             <p className="text-slate-700 leading-relaxed">{userProfile.bio}</p>
           )}
 
+          {isAdminProfile && userProfile?.bio && (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              {userProfile.bio}
+            </div>
+          )}
+
           {/* Profile details */}
-          {!isCoachProfile && athleteInfoCards.length > 0 && (
+          {isAthleteProfile && athleteInfoCards.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {athleteInfoCards.map((card) => (
                 <div key={card.label} className="bg-slate-50 rounded-2xl p-4">
@@ -747,6 +848,29 @@ export default function ProfilePage() {
                   <p className="text-[#0F172A] font-medium">{card.value}</p>
                 </div>
               ))}
+            </div>
+          )}
+          {isAdminProfile && adminInfoCards.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {adminInfoCards.map((card) => {
+                const Icon = card.icon;
+                return (
+                  <div
+                    key={card.label}
+                    className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+                  >
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        {card.label}
+                      </p>
+                      <p className="text-sm font-semibold text-[#0F172A] truncate">{card.value}</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
           {isCoachProfile && coachInfoCards.length > 0 && (
@@ -807,7 +931,7 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {!isCoachProfile && userProfile?.ogLockerLinkUser && (
+          {isAthleteProfile && userProfile?.ogLockerLinkUser && (
             <div className="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-amber-100 px-4 py-3 shadow-sm flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-400 text-white font-semibold">
                 OG
@@ -829,13 +953,26 @@ export default function ProfilePage() {
             >
               Edit Profile
             </motion.button>
-            <Link href={isCoachProfile ? "/coach" : "/match"} className="contents">
+            <Link
+              href={
+                isCoachProfile
+                  ? "/coach"
+                  : isAdminProfile
+                  ? "/coach"
+                  : "/match"
+              }
+              className="contents"
+            >
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="flex-1 sm:flex-none sm:w-auto items-center justify-center gap-2 rounded-xl border border-[#3B82F6] bg-white px-4 sm:px-6 py-2.5 sm:py-3 text-[#3B82F6] font-medium transition-all duration-200 hover:bg-blue-50 shadow-sm hover:shadow-md touch-manipulation min-h-[44px] text-sm sm:text-base"
               >
-                {isCoachProfile ? "Open Coach Dashboard" : "Find Match"}
+                {isCoachProfile
+                  ? "Open Coach Dashboard"
+                  : isAdminProfile
+                  ? "Open Admin Dashboard"
+                  : "Find Match"}
               </motion.button>
             </Link>
             <motion.button
@@ -850,11 +987,10 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Highlights section */}
-      <div className="max-w-2xl mx-auto px-4">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[#0F172A] font-semibold">My Highlights</h2>
-          {!isCoachProfile && (
+      {isAthleteProfile && (
+        <div className="max-w-2xl mx-auto px-4">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-[#0F172A] font-semibold">My Highlights</h2>
             <motion.button
               onClick={() => {
                 setSubmitHighlightToChallenge(false);
@@ -867,93 +1003,89 @@ export default function ProfilePage() {
               <Upload className="w-4 h-4" />
               Upload
             </motion.button>
+          </div>
+          {highlights.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {highlights.map((highlight, index) => {
+                const isDeleting = deletingHighlightId === highlight.id;
+                return (
+                  <Link
+                    key={highlight.id}
+                    href={{
+                      pathname: `/highlights/${highlight.id}`,
+                      query: { returnUrl: "/profile" },
+                    }}
+                  >
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="relative aspect-[4/5] sm:aspect-square bg-slate-100 rounded-2xl overflow-hidden group cursor-pointer"
+                    >
+                      {highlight.thumbnailURL ? (
+                        <Image
+                          src={highlight.thumbnailURL}
+                          alt={highlight.title}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center">
+                          <Play className="w-8 h-8 text-slate-400" />
+                        </div>
+                      )}
+                      {highlight.submittedToChallenge && (
+                        <div className="absolute top-2 right-2 rounded-full bg-[#FACC15] text-[#0F172A] px-2 py-1 text-xs font-semibold shadow">
+                          Challenge
+                        </div>
+                      )}
+                      
+                      {/* Overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      
+                      {/* Play button on hover */}
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center">
+                          <Play className="w-6 h-6 text-[#3B82F6] ml-1" fill="currentColor" />
+                        </div>
+                      </div>
+                      
+                      {/* View count */}
+                      {highlight.views && highlight.views > 0 && (
+                        <div className="absolute bottom-2 left-2 text-white text-xs bg-black/50 backdrop-blur-sm px-2 py-1 rounded-md">
+                          {highlight.views >= 1000 
+                            ? `${(highlight.views / 1000).toFixed(1)}k` 
+                            : highlight.views.toString()}
+                        </div>
+                      )}
+                    </motion.div>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center">
+              <Play className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+              <p className="text-slate-600 mb-2">No highlights yet</p>
+              <motion.button
+                onClick={() => {
+                  setSubmitHighlightToChallenge(false);
+                  setShowUploadModal(true);
+                }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="rounded-xl bg-[#007AFF] px-6 py-3 text-white font-medium shadow-sm hover:shadow-md transition-all inline-flex items-center gap-2"
+              >
+                <Upload className="w-5 h-5" />
+                Upload Your First Highlight
+              </motion.button>
+            </div>
           )}
         </div>
-        {highlights.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {highlights.map((highlight, index) => {
-              const isDeleting = deletingHighlightId === highlight.id;
-              return (
-                <Link
-                  key={highlight.id}
-                  href={{
-                    pathname: `/highlights/${highlight.id}`,
-                    query: { returnUrl: "/profile" },
-                  }}
-                >
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="relative aspect-[4/5] sm:aspect-square bg-slate-100 rounded-2xl overflow-hidden group cursor-pointer"
-                  >
-                    {highlight.thumbnailURL ? (
-                      <Image
-                        src={highlight.thumbnailURL}
-                        alt={highlight.title}
-                        fill
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center">
-                        <Play className="w-8 h-8 text-slate-400" />
-                      </div>
-                    )}
-                    {highlight.submittedToChallenge && (
-                      <div className="absolute top-2 right-2 rounded-full bg-[#FACC15] text-[#0F172A] px-2 py-1 text-xs font-semibold shadow">
-                        Challenge
-                      </div>
-                    )}
-                    
-                    {/* Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                    
-                    {/* Play button on hover */}
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center">
-                        <Play className="w-6 h-6 text-[#3B82F6] ml-1" fill="currentColor" />
-                      </div>
-                    </div>
-                    
-                    {/* View count */}
-                    {highlight.views && highlight.views > 0 && (
-                      <div className="absolute bottom-2 left-2 text-white text-xs bg-black/50 backdrop-blur-sm px-2 py-1 rounded-md">
-                        {highlight.views >= 1000 
-                          ? `${(highlight.views / 1000).toFixed(1)}k` 
-                          : highlight.views.toString()}
-                      </div>
-                    )}
-                  </motion.div>
-                </Link>
-              );
-            })}
-          </div>
-        ) : !isCoachProfile ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center">
-            <Play className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-600 mb-2">No highlights yet</p>
-            <motion.button
-              onClick={() => {
-                setSubmitHighlightToChallenge(false);
-                setShowUploadModal(true);
-              }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="rounded-xl bg-[#007AFF] px-6 py-3 text-white font-medium shadow-sm hover:shadow-md transition-all inline-flex items-center gap-2"
-            >
-              <Upload className="w-5 h-5" />
-              Upload Your First Highlight
-            </motion.button>
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-slate-600">
-            Coaches don’t upload highlights, but you can post training updates or share links instead.
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Upload Modal */}
-      {showUploadModal && !isCoachProfile && (
+      {showUploadModal && isAthleteProfile && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}

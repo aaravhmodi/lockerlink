@@ -19,7 +19,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [userType, setUserType] = useState<"athlete" | "coach" | "">("");
+  const [userType, setUserType] = useState<"athlete" | "coach" | "admin" | "">("");
 
   useEffect(() => {
     if (!user) {
@@ -31,7 +31,7 @@ export default function LoginPage() {
       doc(db, "users", user.uid),
       (snapshot) => {
         const data = snapshot.data();
-        setUserType((data?.userType as "athlete" | "coach") || "");
+        setUserType((data?.userType as "athlete" | "coach" | "admin") || "");
       },
       () => setUserType("")
     );

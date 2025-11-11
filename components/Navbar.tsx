@@ -19,7 +19,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const [showMenu, setShowMenu] = useState(false);
   const [showProfileReminder, setShowProfileReminder] = useState(false);
-  const [userType, setUserType] = useState<"athlete" | "coach" | "">("");
+  const [userType, setUserType] = useState<"athlete" | "coach" | "admin" | "">("");
   const reminderTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const triggerProfileReminder = () => {
@@ -51,7 +51,7 @@ export default function Navbar() {
       doc(db, "users", user.uid),
       (snapshot) => {
         const data = snapshot.data();
-        setUserType((data?.userType as "athlete" | "coach") || "athlete");
+        setUserType((data?.userType as "athlete" | "coach" | "admin") || "athlete");
       },
       () => {
         setUserType("athlete");
@@ -109,6 +109,7 @@ export default function Navbar() {
   }
 
   const isCoach = userType === "coach";
+  const isAdmin = userType === "admin";
   const navItems = isCoach
     ? [
         { href: "/home", label: "Home", icon: HiHome },
@@ -116,6 +117,13 @@ export default function Navbar() {
         { href: "/coach", label: "Coach", icon: HiInformationCircle },
         { href: "/profile", label: "Profile", icon: HiUser },
       ]
+    : isAdmin
+      ? [
+          { href: "/home", label: "Home", icon: HiHome },
+          { href: "/coach", label: "Admin", icon: HiInformationCircle },
+          { href: "/messages", label: "Messages", icon: HiChat },
+          { href: "/profile", label: "Profile", icon: HiUser },
+        ]
     : [
         { href: "/home", label: "Home", icon: HiHome },
         { href: "/explore", label: "Explore", icon: HiSearch },

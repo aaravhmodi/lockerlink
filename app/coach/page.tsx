@@ -122,14 +122,14 @@ export default function CoachDashboardPage() {
           <section className="mb-10">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-xl font-semibold text-[#0F172A]">Athletes</h2>
-                <p className="text-sm text-[#64748B]">Browse players who are looking for exposure.</p>
+                <h2 className="text-xl font-semibold text-[#0F172A]">Highlights</h2>
+                <p className="text-sm text-[#64748B]">Browse clips from athletes across LockerLink.</p>
               </div>
               <Link
                 href="/explore"
                 className="hidden sm:inline-flex items-center gap-2 rounded-xl border border-[#E5E7EB] px-4 py-2 text-sm font-medium text-[#0F172A] hover:bg-[#F8FAFC] transition-all"
               >
-                Explore All Athletes
+                Explore Highlights
               </Link>
             </div>
 
@@ -218,13 +218,23 @@ export default function CoachDashboardPage() {
             )}
           </section>
 
-          <section className="rounded-2xl border border-dashed border-[#CBD5F5] bg-white/60 p-6 text-sm text-[#475569]">
-            <h3 className="text-lg font-semibold text-[#0F172A] mb-2">Next Steps for Coaches</h3>
+          <section className="rounded-2xl border border-dashed border-[#CBD5F5] bg-white/60 p-6 text-sm text-[#475569] space-y-3">
+            <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 text-amber-700 px-3 py-1 text-xs font-semibold uppercase tracking-wide">
+              Beta
+            </div>
+            <h3 className="text-lg font-semibold text-[#0F172A]">Admin Mode (Beta)</h3>
+            <p>
+              Use LockerLink to oversee your players and support their volleyball experience.
+            </p>
             <ul className="list-disc pl-5 space-y-1">
-              <li>Bookmark athletes you want to follow up with (coming soon).</li>
-              <li>Post tryouts to the LockerLink community so athletes can discover you.</li>
-              <li>Leave private notes on player profiles to keep your scouting organized.</li>
+              <li>View highlights and posts from athletes and coaches to stay informed.</li>
+              <li>Follow each athlete’s growth through their profiles and achievements.</li>
+              <li>Monitor coach-player conversations to promote safe, transparent communication.</li>
+              <li>Share encouragement and help coordinate workouts, permissions, or resources.</li>
             </ul>
+            <p className="text-[#334155]">
+              Everything you see here is still in beta while we build out the full Admin experience. Thanks for being an early tester!
+            </p>
           </section>
         </main>
       </div>

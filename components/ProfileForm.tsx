@@ -28,10 +28,11 @@ interface UserProfile {
   spikeTouch?: string;
   points?: number;
   photoURL?: string;
-  userType: "athlete" | "coach";
+  userType: "athlete" | "coach" | "admin";
   division?: string;
   coachMessage?: string;
   ogLockerLinkUser?: boolean;
+  adminRole?: "parent" | "clubAdmin" | "";
 }
 
 interface ProfileFormProps {
@@ -120,6 +121,7 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
     division: "",
     coachMessage: "",
     ogLockerLinkUser: false,
+    adminRole: "",
   });
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -133,6 +135,7 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
   const [standingTouch, setStandingTouch] = useState<string>("");
   const [spikeTouch, setSpikeTouch] = useState<string>("");
   const isCoach = formData.userType === "coach";
+  const isAdmin = formData.userType === "admin";
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -149,7 +152,7 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
           const standingValue = parseNumericValue(data.standingTouch);
           const spikeValue = parseNumericValue(data.spikeTouch);
           const derivedAgeGroup = data.ageGroup || convertAgeToGroup(data.age);
-          setFormData({
+        setFormData({
             username: data.username || "",
             name: data.name || "",
             team: data.team || "",
@@ -169,10 +172,11 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
             spikeTouch: data.spikeTouch || "",
             points: typeof data.points === "number" ? data.points : 0,
             photoURL: data.photoURL || "",
-            userType: (data.userType as "athlete" | "coach") || "athlete",
+          userType: (data.userType as "athlete" | "coach" | "admin") || "athlete",
             division: data.division || "",
-            coachMessage: data.coachMessage || "",
-            ogLockerLinkUser: data.ogLockerLinkUser ?? true,
+          coachMessage: data.coachMessage || "",
+          ogLockerLinkUser: data.ogLockerLinkUser ?? true,
+          adminRole: data.adminRole || "",
           });
           setHeightFeet(heightParts.feet);
           setHeightInches(heightParts.inches);
@@ -204,6 +208,7 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
             spikeTouch: "",
             points: 0,
             ogLockerLinkUser: prev.ogLockerLinkUser ?? true,
+            adminRole: "",
           }));
         }
       } catch (error) {
@@ -285,8 +290,9 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
       }
 
       const isCoachSubmit = formData.userType === "coach";
+      const isAdminSubmit = formData.userType === "admin";
 
-      if (!isCoachSubmit) {
+      if (!isCoachSubmit && !isAdminSubmit) {
         if (!formData.ageGroup) {
           alert("Please select your age group (17U or 18U).");
           setSaving(false);
@@ -294,6 +300,23 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         }
         if (!formData.birthMonth || !formData.birthYear) {
           alert("Please provide your birth month and year.");
+          setSaving(false);
+          return;
+        }
+      }
+
+      const trimmedTeam = formData.team.trim();
+      const trimmedCity = formData.city.trim();
+
+      if (isAdminSubmit) {
+        if (!formData.adminRole) {
+          alert("Please choose whether you're a Parent/Guardian or Club Admin.");
+          setSaving(false);
+          return;
+        }
+
+        if (formData.adminRole === "clubAdmin" && !trimmedTeam) {
+          alert("Please enter the team you oversee as a Club Admin.");
           setSaving(false);
           return;
         }
@@ -314,19 +337,29 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
           : 0;
 
       const normalizedHeight =
-        isCoachSubmit || (!feetValue && !inchValue)
+        isCoachSubmit || isAdminSubmit || (!feetValue && !inchValue)
           ? ""
           : `${feetValue}'${inchValue}"`;
       const normalizedVertical =
-        isCoachSubmit || !verticalValue ? "" : `${verticalValue}"`;
+        isCoachSubmit || isAdminSubmit || !verticalValue ? "" : `${verticalValue}"`;
       const normalizedWeight =
-        isCoachSubmit || !weightValue ? "" : `${weightValue} lbs`;
+        isCoachSubmit || isAdminSubmit || !weightValue ? "" : `${weightValue} lbs`;
       const normalizedBlockTouch =
-        isCoachSubmit || !blockValue ? "" : `${blockValue}"`;
+        isCoachSubmit || isAdminSubmit || !blockValue ? "" : `${blockValue}"`;
       const normalizedStandingTouch =
-        isCoachSubmit || !standingValue ? "" : `${standingValue}"`;
+        isCoachSubmit || isAdminSubmit || !standingValue ? "" : `${standingValue}"`;
       const normalizedSpikeTouch =
-        isCoachSubmit || !spikeValue ? "" : `${spikeValue}"`;
+        isCoachSubmit || isAdminSubmit || !spikeValue ? "" : `${spikeValue}"`;
+      const normalizedTeam = isCoachSubmit
+        ? trimmedTeam
+        : isAdminSubmit && formData.adminRole === "clubAdmin"
+          ? trimmedTeam
+          : "";
+      const normalizedCity = isCoachSubmit ? trimmedCity : isAdminSubmit && formData.adminRole === "clubAdmin" ? trimmedCity : "";
+      const normalizedPosition = isCoachSubmit || isAdminSubmit ? "" : formData.position;
+      const normalizedSecondaryPosition =
+        isCoachSubmit || isAdminSubmit ? "" : formData.secondaryPosition || "";
+      const normalizedCoachMessage = isCoachSubmit ? formData.coachMessage?.trim() || "" : "";
 
       // Save profile using setDoc with merge: true (creates or updates)
       // Store username in lowercase for case-insensitive searches
@@ -334,6 +367,10 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         doc(db, "users", user.uid),
         {
           ...formData,
+          team: normalizedTeam,
+          city: normalizedCity,
+          position: normalizedPosition,
+          secondaryPosition: normalizedSecondaryPosition,
           sport: "Volleyball",
           username: formData.username.toLowerCase().trim(),
           photoURL,
@@ -341,19 +378,17 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
           vertical: normalizedVertical,
           weight: normalizedWeight,
           userType: formData.userType,
-          ageGroup: isCoachSubmit ? "" : formData.ageGroup,
-          birthMonth: isCoachSubmit ? "" : formData.birthMonth,
-          birthYear: isCoachSubmit ? "" : formData.birthYear,
-          secondaryPosition: isCoachSubmit ? "" : formData.secondaryPosition || "",
+          ageGroup: isCoachSubmit || isAdminSubmit ? "" : formData.ageGroup,
+          birthMonth: isCoachSubmit || isAdminSubmit ? "" : formData.birthMonth,
+          birthYear: isCoachSubmit || isAdminSubmit ? "" : formData.birthYear,
           blockTouch: normalizedBlockTouch,
           standingTouch: normalizedStandingTouch,
           spikeTouch: normalizedSpikeTouch,
-          division: formData.division || "",
-          coachMessage: isCoachSubmit
-            ? formData.coachMessage?.trim() || ""
-            : formData.coachMessage?.trim() || formData.bio || "",
+          division: isCoachSubmit ? formData.division || "" : "",
+          coachMessage: normalizedCoachMessage,
           ogLockerLinkUser: formData.ogLockerLinkUser ?? true,
-          points: isCoachSubmit ? 0 : pointsValue,
+          points: isCoachSubmit || isAdminSubmit ? 0 : pointsValue,
+          adminRole: isAdminSubmit ? formData.adminRole : "",
         },
         { merge: true }
       );
@@ -368,14 +403,26 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         blockTouch: normalizedBlockTouch,
         standingTouch: normalizedStandingTouch,
         spikeTouch: normalizedSpikeTouch,
-        division: formData.division || "",
-        coachMessage: formData.coachMessage || "",
+        division: isCoachSubmit ? formData.division || "" : "",
+        coachMessage: normalizedCoachMessage,
         ogLockerLinkUser: formData.ogLockerLinkUser ?? true,
-        points: isCoachSubmit ? 0 : pointsValue,
+        points: isCoachSubmit || isAdminSubmit ? 0 : pointsValue,
+        team: normalizedTeam,
+        city: normalizedCity,
+        position: normalizedPosition,
+        secondaryPosition: normalizedSecondaryPosition,
+        ageGroup: isCoachSubmit || isAdminSubmit ? "" : formData.ageGroup,
+        birthMonth: isCoachSubmit || isAdminSubmit ? "" : formData.birthMonth,
+        birthYear: isCoachSubmit || isAdminSubmit ? "" : formData.birthYear,
+        adminRole: isAdminSubmit ? formData.adminRole : "",
       });
-      setBlockTouch(blockTouch ? blockTouch : "");
-      setStandingTouch(standingTouch ? standingTouch : "");
-      setSpikeTouch(spikeTouch ? spikeTouch : "");
+      setHeightFeet(isCoachSubmit || isAdminSubmit ? "" : heightFeet);
+      setHeightInches(isCoachSubmit || isAdminSubmit ? "" : heightInches);
+      setVerticalInches(isCoachSubmit || isAdminSubmit ? "" : verticalInches);
+      setWeightLbs(isCoachSubmit || isAdminSubmit ? "" : weightLbs);
+      setBlockTouch(isCoachSubmit || isAdminSubmit ? "" : blockTouch);
+      setStandingTouch(isCoachSubmit || isAdminSubmit ? "" : standingTouch);
+      setSpikeTouch(isCoachSubmit || isAdminSubmit ? "" : spikeTouch);
       setPhotoPreview(null);
       setPhotoFile(null);
       
@@ -505,7 +552,7 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
               />
             </div>
           </div>
-          {!isCoach && (
+          {!isCoach && !isAdmin && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
                 <div>
@@ -513,7 +560,7 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
                   <select
                     value={formData.ageGroup}
                     onChange={(e) => setFormData({ ...formData, ageGroup: e.target.value })}
-                    required={!isCoach}
+                    required={!isCoach && !isAdmin}
                     className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
                   >
                     <option value="">Select age group</option>
@@ -529,7 +576,7 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
                   <select
                     value={formData.birthMonth}
                     onChange={(e) => setFormData({ ...formData, birthMonth: e.target.value })}
-                    required={!isCoach}
+                    required={!isCoach && !isAdmin}
                     className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
                   >
                     <option value="">Select month</option>
@@ -545,7 +592,7 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
                   <select
                     value={formData.birthYear}
                     onChange={(e) => setFormData({ ...formData, birthYear: e.target.value })}
-                    required={!isCoach}
+                    required={!isCoach && !isAdmin}
                     className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
                   >
                     <option value="">Select year</option>
@@ -569,7 +616,7 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
                         max={7}
                         value={heightFeet}
                         onChange={(e) => setHeightFeet(e.target.value)}
-                        required
+                        required={!isAdmin}
                         placeholder="Feet"
                         className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 pr-12 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
                       />
@@ -584,7 +631,7 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
                         max={11}
                         value={heightInches}
                         onChange={(e) => setHeightInches(e.target.value)}
-                        required
+                        required={!isAdmin}
                         placeholder="Inches"
                         className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 pr-12 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
                       />
@@ -601,51 +648,101 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         <label className="mb-2 block text-sm font-medium text-[#111827]">Account Type</label>
         <div
           className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold ${
-            isCoach ? "border-emerald-200 bg-emerald-50 text-emerald-600" : "border-blue-200 bg-blue-50 text-[#1D4ED8]"
+            isCoach
+              ? "border-emerald-200 bg-emerald-50 text-emerald-600"
+              : isAdmin
+              ? "border-amber-200 bg-amber-50 text-amber-700"
+              : "border-blue-200 bg-blue-50 text-[#1D4ED8]"
           }`}
         >
-          {isCoach ? "Coach" : "Athlete"}
+          {isCoach ? "Coach" : isAdmin ? (formData.adminRole === "clubAdmin" ? "Club Admin" : "Parent") : "Athlete"}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {isAdmin && (
         <div>
-          <label className="mb-2 block text-sm font-medium text-[#111827]">
-            {isCoach ? "Team / Club *" : "Team *"}
-          </label>
+          <label className="mb-2 block text-sm font-medium text-[#111827]">Admin Type *</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {[
+              { value: "parent", label: "Parent / Guardian" },
+              { value: "clubAdmin", label: "Club Admin / Manager" },
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    adminRole: option.value as "parent" | "clubAdmin",
+                    team: option.value === "clubAdmin" ? prev.team : "",
+                  }))
+                }
+                className={`rounded-xl border px-4 py-2 text-sm font-medium transition-all ${
+                  formData.adminRole === option.value
+                    ? "border-[#007AFF] bg-[#E0F2FF] text-[#0F172A]"
+                    : "border-[#E5E7EB] bg-white text-[#111827] hover:border-[#007AFF]/60"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          {formData.adminRole === "clubAdmin" && (
+            <p className="mt-2 text-xs text-[#6B7280]">
+              Selecting Club Admin helps coaches and athletes recognize your club affiliation.
+            </p>
+          )}
+          {formData.adminRole === "parent" && (
+            <p className="mt-2 text-xs text-[#6B7280]">
+              Parents and guardians can keep things simple—no extra team info is required.
+            </p>
+          )}
+        </div>
+      )}
+
+      {isCoach && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[#111827]">Team / Club *</label>
+            <input
+              type="text"
+              value={formData.team}
+              onChange={(e) => setFormData({ ...formData, team: e.target.value })}
+              required
+              placeholder="e.g., Milton Edge 17U"
+              className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[#111827]">Region *</label>
+            <input
+              type="text"
+              value={formData.city}
+              onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+              required
+              placeholder="e.g., Peel Region"
+              className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+            />
+            <p className="mt-1 text-xs text-[#6B7280]">List the region you recruit from (e.g., GTA, Peel Region).</p>
+          </div>
+        </div>
+      )}
+
+      {isAdmin && formData.adminRole === "clubAdmin" && (
+        <div>
+          <label className="mb-2 block text-sm font-medium text-[#111827]">Team *</label>
           <input
             type="text"
             value={formData.team}
             onChange={(e) => setFormData({ ...formData, team: e.target.value })}
             required
-            placeholder="e.g., Milton Acers"
+            placeholder="e.g., Milton Edge 17U"
             className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
           />
+          <p className="mt-1 text-xs text-[#6B7280]">Let athletes and coaches know which club you manage.</p>
         </div>
-
-        <div>
-          <label className="mb-2 block text-sm font-medium text-[#111827]">
-            {isCoach ? "Region *" : "City *"}
-          </label>
-          <input
-            type="text"
-            value={formData.city}
-            onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-            required
-            placeholder={isCoach ? "e.g., Peel Region" : "e.g., Milton"}
-            className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
-          />
-          {!isCoach ? (
-            <p className="mt-1 text-xs text-[#6B7280]">
-              Use the city where you live (e.g., Milton). Keep your team or club name in the Team field.
-            </p>
-          ) : (
-            <p className="mt-1 text-xs text-[#6B7280]">
-              List the region you recruit from (e.g., GTA, Peel Region).
-            </p>
-          )}
-        </div>
-      </div>
+      )}
 
       {isCoach && (
         <div>
@@ -670,7 +767,7 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
           <input type="hidden" name="sport" value="Volleyball" />
         </div>
 
-        {!isCoach && (
+        {!isCoach && !isAdmin && (
           <div>
             <label className="mb-2 block text-sm font-medium text-[#111827]">Position *</label>
             <select
@@ -690,7 +787,7 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         )}
       </div>
 
-      {!isCoach && (
+      {!isCoach && !isAdmin && (
         <div>
           <label className="mb-2 block text-sm font-medium text-[#111827]">Secondary Position (optional)</label>
           <select
@@ -708,7 +805,7 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         </div>
       )}
 
-      {!isCoach && (
+      {!isCoach && !isAdmin && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="mb-2 block text-sm font-medium text-[#111827]">Vertical *</label>
@@ -745,7 +842,7 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         </div>
       )}
 
-      {!isCoach && (
+      {!isCoach && !isAdmin && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="mb-2 block text-sm font-medium text-[#111827]">Block Touch (optional)</label>
@@ -795,7 +892,7 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         </div>
       )}
 
-      {!isCoach ? (
+      {!isCoach && !isAdmin ? (
         <div>
           <label className="mb-2 block text-sm font-medium text-[#111827]">Bio</label>
           <textarea
@@ -808,7 +905,7 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
           />
           <p className="mt-2 text-xs text-[#6B7280]">{formData.bio.length}/500 characters</p>
         </div>
-      ) : (
+      ) : isCoach ? (
         <div>
           <label className="mb-2 block text-sm font-medium text-[#111827]">Message to Athletes</label>
           <textarea
@@ -825,6 +922,19 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
             className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 resize-none"
           />
           <p className="mt-2 text-xs text-[#6B7280]">{formData.coachMessage?.length || 0}/500 characters</p>
+        </div>
+      ) : (
+        <div>
+          <label className="mb-2 block text-sm font-medium text-[#111827]">About (optional)</label>
+          <textarea
+            value={formData.bio}
+            onChange={(e) => setFormData({ ...formData, bio: e.target.value.slice(0, 500) })}
+            rows={4}
+            maxLength={500}
+            placeholder="Share how you support your club or athlete community."
+            className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 resize-none"
+          />
+          <p className="mt-2 text-xs text-[#6B7280]">{formData.bio.length}/500 characters</p>
         </div>
       )}
 
