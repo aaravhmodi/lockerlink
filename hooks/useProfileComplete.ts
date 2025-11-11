@@ -52,7 +52,7 @@ export function useProfileComplete() {
               data.weight);
 
         const hasHighlight = !!data.hasHighlight;
-        setIsComplete(!!hasRequiredFields && hasHighlight);
+        setIsComplete(isCoach ? !!hasRequiredFields : !!hasRequiredFields && hasHighlight);
         setLoading(false);
       },
       (error) => {

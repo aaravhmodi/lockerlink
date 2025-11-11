@@ -890,20 +890,6 @@ export default function ProfilePage() {
                         Challenge
                       </div>
                     )}
-
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      disabled={isDeleting}
-                      onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        handleDeleteHighlight(highlight.id);
-                      }}
-                      className="absolute top-2 left-2 flex items-center justify-center rounded-full bg-white/90 text-red-500 shadow-md hover:bg-red-50 transition-colors w-9 h-9 disabled:opacity-60"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </motion.button>
                     
                     {/* Overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
