@@ -666,9 +666,9 @@ export default function ProfilePage() {
       {/* Profile info */}
       <div className="max-w-2xl mx-auto px-4 -mt-16 mb-10">
         <div className="bg-white rounded-3xl p-6 sm:p-7 shadow-lg relative space-y-5">
-          <div className="flex items-start gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:gap-4">
             {/* Avatar */}
-            <div className="w-24 h-24 bg-gradient-to-br from-[#FACC15] to-[#F59E0B] rounded-2xl flex items-center justify-center -mt-12 shadow-xl overflow-hidden">
+            <div className="w-24 h-24 bg-gradient-to-br from-[#FACC15] to-[#F59E0B] rounded-2xl flex items-center justify-center -mt-12 shadow-xl overflow-hidden mx-auto sm:mx-0 sm:flex-shrink-0">
               {userProfile?.photoURL ? (
                 <Image
                   src={userProfile.photoURL}
@@ -684,7 +684,7 @@ export default function ProfilePage() {
               )}
             </div>
             
-            <div className="flex-1 pt-2">
+            <div className="flex-1 pt-4 sm:pt-2 text-center sm:text-left">
               <div className="flex items-center gap-2 mb-1.5">
                 <h1 className="text-2xl sm:text-[26px] font-semibold text-[#0F172A] leading-tight">
                   {userProfile?.name || "Player"}
@@ -702,17 +702,17 @@ export default function ProfilePage() {
               )}
               <div className="flex items-center gap-2 flex-wrap">
                 {userProfile?.position && (
-                  <div className="bg-[#3B82F6] text-white px-3 py-1 rounded-full text-sm font-medium">
+                  <div className="bg-[#3B82F6] text-white px-3 py-1 rounded-full text-sm font-medium mx-auto sm:mx-0">
                     {userProfile.position}
                   </div>
                 )}
                 {!isCoachProfile && userProfile?.secondaryPosition && (
-                  <div className="bg-blue-50 text-[#1D4ED8] px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide">
+                  <div className="bg-blue-50 text-[#1D4ED8] px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide mx-auto sm:mx-0">
                     Secondary: {userProfile.secondaryPosition}
                   </div>
                 )}
                 {!isCoachProfile && userProfile?.ageGroup && (
-                  <div className="bg-blue-50 text-[#3B82F6] px-3 py-1 rounded-full text-sm font-medium border-0">
+                  <div className="bg-blue-50 text-[#3B82F6] px-3 py-1 rounded-full text-sm font-medium border-0 mx-auto sm:mx-0">
                     {userProfile.ageGroup}
                   </div>
                 )}
@@ -820,7 +820,7 @@ export default function ProfilePage() {
           )}
 
           {/* Action buttons */}
-          <div className="pt-3 flex flex-col gap-3 sm:flex-row sm:justify-end">
+          <div className="pt-3 flex flex-col gap-3 sm:flex-row sm:justify-end sm:text-right">
             <motion.button
               onClick={() => setShowEditForm(true)}
               whileHover={{ scale: 1.02 }}

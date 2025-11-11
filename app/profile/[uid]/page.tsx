@@ -296,8 +296,8 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
         >
           <div className="bg-gradient-to-br from-[#007AFF] to-[#0056CC] h-32 sm:h-40"></div>
           <div className="px-4 sm:px-8 pb-6 sm:pb-8 -mt-16 sm:-mt-20">
-            <div className="flex items-end gap-4 mb-6 md:pr-60">
-              <div className="h-24 w-24 sm:h-32 sm:w-32 rounded-full border-4 border-white bg-[#F3F4F6] shadow-lg overflow-hidden">
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6 md:pr-60">
+              <div className="h-24 w-24 sm:h-32 sm:w-32 rounded-full border-4 border-white bg-[#F3F4F6] shadow-lg overflow-hidden mx-auto sm:mx-0">
                 {profile.photoURL ? (
                   <Image
                     src={profile.photoURL}
@@ -312,28 +312,30 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
                   </div>
                 )}
               </div>
-            </div>
 
-            {!isOwnProfile && viewerType !== "coach" && (
-              <motion.button
-                onClick={handleStartChat}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="mt-2 flex items-center justify-center gap-2 rounded-xl bg-[#007AFF] px-4 sm:px-6 py-2.5 sm:py-3 text-white font-medium transition-all duration-200 hover:bg-[#0056CC] shadow-md hover:shadow-lg touch-manipulation min-h-[44px] text-sm sm:text-base md:absolute md:right-8 md:top-8 md:mt-0 md:w-52"
-              >
-                <HiChat className="w-5 h-5" />
-                <span className="hidden sm:inline">Message</span>
-                <span className="sm:hidden">Msg</span>
-              </motion.button>
-            )}
-            {isOwnProfile && (
-              <Link
-                href="/profile"
-                className="mt-2 flex items-center justify-center gap-2 rounded-xl bg-[#007AFF] px-4 sm:px-6 py-2.5 sm:py-3 text-white font-medium transition-all duration-200 hover:bg-[#0056CC] shadow-md hover:shadow-lg touch-manipulation min-h-[44px] text-sm sm:text-base md:absolute md:right-8 md:top-8 md:mt-0 md:w-52"
-              >
-                Edit Profile
-              </Link>
-            )}
+              <div className="flex-1 text-center sm:text-right">
+                {!isOwnProfile && viewerType !== "coach" && (
+                  <motion.button
+                    onClick={handleStartChat}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#007AFF] px-4 sm:px-6 py-2.5 sm:py-3 text-white font-medium transition-all duration-200 hover:bg-[#0056CC] shadow-md hover:shadow-lg touch-manipulation min-h-[44px] text-sm sm:text-base"
+                  >
+                    <HiChat className="w-5 h-5" />
+                    <span className="hidden sm:inline">Message</span>
+                    <span className="sm:hidden">Msg</span>
+                  </motion.button>
+                )}
+                {isOwnProfile && (
+                  <Link
+                    href="/profile"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#007AFF] px-4 sm:px-6 py-2.5 sm:py-3 text-white font-medium transition-all duration-200 hover:bg-[#0056CC] shadow-md hover:shadow-lg touch-manipulation min-h-[44px] text-sm sm:text-base"
+                  >
+                    Edit Profile
+                  </Link>
+                )}
+              </div>
+            </div>
 
             <div className="space-y-6">
               <div>
@@ -346,17 +348,17 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
                 )}
                 <div className="mt-3 flex items-center gap-2 flex-wrap">
                   {profile.position && (
-                    <span className="rounded-full bg-[#3B82F6] text-white px-3 py-1 text-sm font-medium">
+                  <span className="inline-flex justify-center rounded-full bg-[#3B82F6] text-white px-3 py-1 text-sm font-medium">
                       {profile.position}
                     </span>
                   )}
                   {!isCoachProfile && profile.secondaryPosition && (
-                    <span className="rounded-full bg-blue-50 text-[#1D4ED8] px-3 py-1 text-xs font-semibold uppercase tracking-wide">
+                  <span className="inline-flex justify-center rounded-full bg-blue-50 text-[#1D4ED8] px-3 py-1 text-xs font-semibold uppercase tracking-wide">
                       Secondary: {profile.secondaryPosition}
                     </span>
                   )}
                   {!isCoachProfile && profile.ageGroup && (
-                    <span className="rounded-full bg-blue-50 text-[#3B82F6] px-3 py-1 text-sm font-medium">
+                  <span className="inline-flex justify-center rounded-full bg-blue-50 text-[#3B82F6] px-3 py-1 text-sm font-medium">
                       {profile.ageGroup}
                     </span>
                   )}
