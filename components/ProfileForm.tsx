@@ -71,7 +71,7 @@ const MONTH_OPTIONS = [
 ];
 
 const currentYear = new Date().getFullYear();
-const YEAR_OPTIONS = Array.from({ length: currentYear - 2016 + 1 }, (_, index) => `${currentYear - index}`);
+const YEAR_OPTIONS = Array.from({ length: currentYear - 2000 + 1 }, (_, index) => `${currentYear - index}`);
 const AGE_GROUP_OPTIONS = ["15U", "16U", "17U", "18U"];
 const POSITION_OPTIONS = [
   "Outside Hitter (Left Side)",
@@ -132,7 +132,6 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
   const [blockTouch, setBlockTouch] = useState<string>("");
   const [standingTouch, setStandingTouch] = useState<string>("");
   const [spikeTouch, setSpikeTouch] = useState<string>("");
-  const [points, setPoints] = useState<string>("0");
   const isCoach = formData.userType === "coach";
 
   const handleUserTypeSelect = (nextType: "athlete" | "coach") => {
@@ -146,7 +145,6 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
       setBlockTouch("");
       setStandingTouch("");
       setSpikeTouch("");
-      setPoints("0");
       setFormData((prev) => ({
         ...prev,
         userType: nextType,
@@ -171,9 +169,6 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
       const blockValue = parseNumericValue(formData.blockTouch);
       const standingValue = parseNumericValue(formData.standingTouch);
       const spikeValue = parseNumericValue(formData.spikeTouch);
-      const pointsValue = parseNumericValue(
-        formData.points !== undefined ? String(formData.points) : undefined
-      );
       setHeightFeet(heightParts.feet);
       setHeightInches(heightParts.inches);
       setVerticalInches(verticalValue);
@@ -181,7 +176,6 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
       setBlockTouch(blockValue);
       setStandingTouch(standingValue);
       setSpikeTouch(spikeValue);
-      setPoints(pointsValue);
       setFormData((prev) => ({
         ...prev,
         userType: nextType,
@@ -203,9 +197,6 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
           const blockValue = parseNumericValue(data.blockTouch);
           const standingValue = parseNumericValue(data.standingTouch);
           const spikeValue = parseNumericValue(data.spikeTouch);
-          const pointsValue = parseNumericValue(
-            data.points !== undefined ? String(data.points) : undefined
-          );
           const derivedAgeGroup = data.ageGroup || convertAgeToGroup(data.age);
           setFormData({
             username: data.username || "",
@@ -239,7 +230,6 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
           setBlockTouch(blockValue);
           setStandingTouch(standingValue);
           setSpikeTouch(spikeValue);
-          setPoints(pointsValue);
           if (data.photoURL) {
             setPhotoPreview(null);
           }
@@ -251,7 +241,6 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
           setBlockTouch("");
           setStandingTouch("");
           setSpikeTouch("");
-          setPoints("0");
           setFormData((prev) => ({
             ...prev,
             userType: "athlete",
@@ -366,7 +355,12 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
       const blockValue = blockTouch ? parseInt(blockTouch, 10) : 0;
       const standingValue = standingTouch ? parseInt(standingTouch, 10) : 0;
       const spikeValue = spikeTouch ? parseInt(spikeTouch, 10) : 0;
-      const pointsValue = points ? parseInt(points, 10) : 0;
+      const pointsValue =
+        typeof formData.points === "number"
+          ? formData.points
+          : formData.points
+          ? parseInt(String(formData.points), 10) || 0
+          : 0;
 
       const normalizedHeight =
         isCoachSubmit || (!feetValue && !inchValue)
@@ -431,7 +425,6 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
       setBlockTouch(blockTouch ? blockTouch : "");
       setStandingTouch(standingTouch ? standingTouch : "");
       setSpikeTouch(spikeTouch ? spikeTouch : "");
-      setPoints(isCoachSubmit ? "0" : String(pointsValue));
       setPhotoPreview(null);
       setPhotoFile(null);
       
@@ -853,20 +846,6 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
               />
               <span className="absolute inset-y-0 right-4 flex items-center text-sm text-[#6B7280]">in</span>
             </div>
-          </div>
-          <div>
-            <label className="mb-2 block text-sm font-medium text-[#111827]">Points</label>
-            <input
-              type="number"
-              min={0}
-              value={points}
-              onChange={(e) => {
-                setPoints(e.target.value);
-                setFormData({ ...formData, points: Number(e.target.value) || 0 });
-              }}
-              placeholder="e.g., 12"
-              className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
-            />
           </div>
         </div>
       )}
