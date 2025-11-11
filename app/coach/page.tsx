@@ -28,6 +28,7 @@ export default function CoachDashboardPage() {
   const { user, loading } = useUser();
   const router = useRouter();
   const [authorized, setAuthorized] = useState(false);
+  const [isAdminView, setIsAdminView] = useState(false);
   const [players, setPlayers] = useState<PlayerSummary[]>([]);
   const [loadingPlayers, setLoadingPlayers] = useState(true);
 
@@ -43,7 +44,7 @@ export default function CoachDashboardPage() {
     const verifyRole = async () => {
       const profileSnap = await getDoc(doc(db, "users", user.uid));
       const profile = profileSnap.data();
-      if (!profile || profile.userType !== "coach") {
+      if (!profile || (profile.userType !== "coach" && profile.userType !== "admin")) {
         router.replace("/home");
         setAuthorized(false);
         setLoadingPlayers(false);
@@ -51,6 +52,7 @@ export default function CoachDashboardPage() {
       }
 
       setAuthorized(true);
+      setIsAdminView(profile.userType === "admin");
 
       const playersQuery = query(
         collection(db, "users"),
@@ -113,23 +115,33 @@ export default function CoachDashboardPage() {
         <main className="mx-auto max-w-5xl px-4 sm:px-6 pt-6 sm:pt-10">
           <BackButton fallback="/home" className="mb-6" />
           <div className="mb-8">
-            <h1 className="text-3xl font-semibold text-[#0F172A] mb-2">Coach Dashboard</h1>
+            <h1 className="text-3xl font-semibold text-[#0F172A] mb-2">
+              {isAdminView ? "Admin Dashboard" : "Coach Dashboard"}
+            </h1>
             <p className="text-[#475569] max-w-2xl">
-              Scout athletes, track bookmarked players, and post upcoming tryouts. LockerLink keeps your recruiting workflow in one place.
+              {isAdminView
+                ? "Keep tabs on the athletes and coaches you support. LockerLink gives you one dashboard to monitor highlights, posts, and conversations in real time."
+                : "Scout athletes, track bookmarked players, and post upcoming tryouts. LockerLink keeps your recruiting workflow in one place."}
             </p>
           </div>
 
           <section className="mb-10">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-xl font-semibold text-[#0F172A]">Highlights</h2>
-                <p className="text-sm text-[#64748B]">Browse clips from athletes across LockerLink.</p>
+                <h2 className="text-xl font-semibold text-[#0F172A]">
+                  {isAdminView ? "Recent Highlights" : "Highlights"}
+                </h2>
+                <p className="text-sm text-[#64748B]">
+                  {isAdminView
+                    ? "See what your athletes are sharing so you can celebrate wins and track progress."
+                    : "Browse clips from athletes across LockerLink."}
+                </p>
               </div>
               <Link
                 href="/explore"
                 className="hidden sm:inline-flex items-center gap-2 rounded-xl border border-[#E5E7EB] px-4 py-2 text-sm font-medium text-[#0F172A] hover:bg-[#F8FAFC] transition-all"
               >
-                Explore Highlights
+                {isAdminView ? "Open Explore" : "Explore Highlights"}
               </Link>
             </div>
 
@@ -218,24 +230,41 @@ export default function CoachDashboardPage() {
             )}
           </section>
 
-          <section className="rounded-2xl border border-dashed border-[#CBD5F5] bg-white/60 p-6 text-sm text-[#475569] space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 text-amber-700 px-3 py-1 text-xs font-semibold uppercase tracking-wide">
-              Beta
-            </div>
-            <h3 className="text-lg font-semibold text-[#0F172A]">Admin Mode (Beta)</h3>
-            <p>
-              Use LockerLink to oversee your players and support their volleyball experience.
-            </p>
-            <ul className="list-disc pl-5 space-y-1">
-              <li>View highlights and posts from athletes and coaches to stay informed.</li>
-              <li>Follow each athlete’s growth through their profiles and achievements.</li>
-              <li>Monitor coach-player conversations to promote safe, transparent communication.</li>
-              <li>Share encouragement and help coordinate workouts, permissions, or resources.</li>
-            </ul>
-            <p className="text-[#334155]">
-              Everything you see here is still in beta while we build out the full Admin experience. Thanks for being an early tester!
-            </p>
-          </section>
+          {isAdminView ? (
+            <section className="rounded-2xl border border-dashed border-[#CBD5F5] bg-white/60 p-6 text-sm text-[#475569] space-y-3">
+              <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 text-amber-700 px-3 py-1 text-xs font-semibold uppercase tracking-wide">
+                Beta
+              </div>
+              <h3 className="text-lg font-semibold text-[#0F172A]">Admin Mode (Beta)</h3>
+              <p>
+                Use LockerLink to oversee your players and support their volleyball experience.
+              </p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>View highlights and posts from athletes and coaches to stay informed.</li>
+                <li>Follow each athlete’s growth through their profiles and achievements.</li>
+                <li>Monitor coach-player conversations to promote safe, transparent communication.</li>
+                <li>Share encouragement and help coordinate workouts, permissions, or resources.</li>
+              </ul>
+              <p className="text-[#334155]">
+                Everything you see here is still in beta while we build out the full Admin experience. Thanks for being an early tester!
+              </p>
+            </section>
+          ) : (
+            <section className="rounded-2xl border border-dashed border-[#CBD5F5] bg-white/60 p-6 text-sm text-[#475569] space-y-3">
+              <div className="inline-flex items-center gap-2 rounded-full bg-blue-100 text-blue-700 px-3 py-1 text-xs font-semibold uppercase tracking-wide">
+                Tips
+              </div>
+              <h3 className="text-lg font-semibold text-[#0F172A]">Next Steps for Coaches</h3>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>Bookmark athletes you want to follow up with.</li>
+                <li>Post tryout announcements to reach the community fast.</li>
+                <li>Message athletes to coordinate gym sessions or feedback.</li>
+              </ul>
+              <p className="text-[#334155]">
+                Keep building your network and helping players grow—LockerLink is here to support you.
+              </p>
+            </section>
+          )}
         </main>
       </div>
     </ProfileGuard>

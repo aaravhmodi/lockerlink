@@ -38,11 +38,11 @@ const ROLE_OPTIONS = [
 export default function RoleSelectPage() {
   const { user, loading } = useUser();
   const router = useRouter();
-  const [currentRole, setCurrentRole] = useState<"athlete" | "coach" | "">("");
+  const [currentRole, setCurrentRole] = useState<"athlete" | "coach" | "admin" | "">("");
   const [displayName, setDisplayName] = useState<string>("");
   const [loadingRole, setLoadingRole] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<"athlete" | "coach" | null>(null);
+  const [selectedRole, setSelectedRole] = useState<"athlete" | "coach" | "admin" | null>(null);
   const [welcomeMessage, setWelcomeMessage] = useState("");
 
   useEffect(() => {
@@ -59,7 +59,7 @@ export default function RoleSelectPage() {
         const userDoc = await getDoc(doc(db, "users", user.uid));
         if (userDoc.exists()) {
           const data = userDoc.data() as any;
-          const userType = data?.userType as "athlete" | "coach" | undefined;
+          const userType = data?.userType as "athlete" | "coach" | "admin" | undefined;
           if (userType) {
             setCurrentRole(userType);
             router.replace("/profile");
@@ -187,7 +187,11 @@ export default function RoleSelectPage() {
                 <div className="space-y-4 relative">
                   <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-sm font-semibold text-[#007AFF] shadow-sm">
                     <Icon className="w-5 h-5" />
-                    {option.type === "athlete" ? "Athlete Mode" : "Coach Mode"}
+                    {option.type === "athlete"
+                      ? "Athlete Mode"
+                      : option.type === "coach"
+                        ? "Coach Mode"
+                        : "Admin Mode"}
                   </div>
                   <div>
                     <h2 className="text-2xl font-semibold text-[#0F172A]">{option.title}</h2>
