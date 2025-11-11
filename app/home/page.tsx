@@ -553,56 +553,6 @@ export default function HomePage() {
             </motion.div>
           )}
 
-          {/* Community Links */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.32 }}
-            className="mb-6 grid gap-4 sm:grid-cols-2"
-          >
-            <Link href="https://discord.gg/YuPY8qBd" target="_blank" rel="noopener noreferrer">
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="flex items-center justify-between gap-3 rounded-3xl border border-indigo-200 bg-gradient-to-r from-indigo-50 via-white to-slate-50 px-5 py-4 shadow-sm"
-              >
-                <div className="space-y-1">
-                  <h3 className="text-sm sm:text-base font-semibold text-[#1D4ED8]">Join the LockerLink Discord</h3>
-                  <p className="text-xs sm:text-sm text-[#1E293B]">
-                    Tap in for updates, share clips, and connect with the community.
-                  </p>
-                </div>
-                <div className="hidden sm:flex items-center justify-center rounded-full bg-[#5865F2] text-white p-3 shadow">
-                  <ArrowRight className="w-4 h-4" />
-                </div>
-              </motion.div>
-            </Link>
-
-            <Link href="https://tally.so/r/LZ1BDy" target="_blank" rel="noopener noreferrer">
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="flex items-center justify-between gap-3 rounded-3xl border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-amber-100 px-5 py-4 shadow-sm relative overflow-hidden"
-              >
-                <div className="absolute -top-8 -right-10 h-24 w-24 rounded-full bg-amber-200/60 blur-3xl" />
-                <div className="relative flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-400 text-white shadow-inner">
-                    <MessageCircle className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm sm:text-base font-semibold text-[#92400E]">Drop Feedback</h3>
-                    <p className="text-xs sm:text-sm text-[#B45309]">
-                      Quick bubble to share what you love or want next in LockerLink.
-                    </p>
-                  </div>
-                </div>
-                <div className="relative hidden sm:flex items-center justify-center rounded-full bg-amber-400 text-white p-3 shadow">
-                  <ArrowRight className="w-4 h-4" />
-                </div>
-              </motion.div>
-            </Link>
-          </motion.div>
-
           {/* Home Feed */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -632,6 +582,50 @@ export default function HomePage() {
                 Be the first to post an update today.
               </div>
             )}
+          </motion.div>
+
+          {/* Community Links */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="mt-6 grid gap-4 sm:grid-cols-2"
+          >
+            <Link href="https://discord.gg/YuPY8qBd" target="_blank" rel="noopener noreferrer">
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="flex min-h-[120px] items-center justify-between gap-3 rounded-3xl border border-indigo-200 bg-gradient-to-r from-indigo-50 via-white to-slate-50 px-5 py-4 shadow-sm"
+              >
+                <div className="space-y-1">
+                  <h3 className="text-sm sm:text-base font-semibold text-[#1D4ED8]">Join the LockerLink Discord</h3>
+                  <p className="text-xs sm:text-sm text-[#1E293B]">
+                    Tap in for updates, share clips, and connect with the community.
+                  </p>
+                </div>
+                <div className="hidden sm:flex items-center justify-center rounded-full bg-[#5865F2] text-white p-3 shadow">
+                  <ArrowRight className="w-4 h-4" />
+                </div>
+              </motion.div>
+            </Link>
+
+            <Link href="https://tally.so/r/LZ1BDy" target="_blank" rel="noopener noreferrer">
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="flex min-h-[120px] items-center justify-between gap-3 rounded-3xl border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-amber-100 px-5 py-4 shadow-sm"
+              >
+                <div className="space-y-1">
+                  <h3 className="text-sm sm:text-base font-semibold text-[#92400E]">Drop Feedback</h3>
+                  <p className="text-xs sm:text-sm text-[#B45309]">
+                    Quick bubble to share what you love or want next in LockerLink.
+                  </p>
+                </div>
+                <div className="hidden sm:flex items-center justify-center rounded-full bg-amber-400 text-white p-3 shadow">
+                  <ArrowRight className="w-4 h-4" />
+                </div>
+              </motion.div>
+            </Link>
           </motion.div>
         </div>
       </div>
