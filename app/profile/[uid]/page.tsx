@@ -135,26 +135,41 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
       orderBy("createdAt", "desc")
     );
 
-    const unsubscribe = onSnapshot(
-      postsQuery,
-      (snapshot) => {
-        const postsData = snapshot.docs.map((docSnap) => {
-          const data = docSnap.data() as any;
-          return {
-            id: docSnap.id,
-            ...data,
-            createdAt: data.createdAt?.toMillis?.() || data.createdAt || Date.now(),
-            commentsCount: data.commentsCount || 0,
-          } as Post;
-        });
-        setPosts(postsData);
-      },
-      (error) => {
-        console.error("Error loading profile posts:", error);
-      }
+    const unsubscribePosts = onSnapshot(postsQuery, (snapshot) => {
+      const postsData = snapshot.docs.map((docSnap) => {
+        const data = docSnap.data() as any;
+        return {
+          id: docSnap.id,
+          ...data,
+          createdAt: data.createdAt?.toMillis?.() || data.createdAt || Date.now(),
+          commentsCount: data.commentsCount || 0,
+        } as Post;
+      });
+      setPosts(postsData);
+    });
+
+    const highlightsQuery = query(
+      collection(db, "highlights"),
+      where("userId", "==", uid),
+      orderBy("createdAt", "desc")
     );
 
-    return () => unsubscribe();
+    const unsubscribeHighlights = onSnapshot(highlightsQuery, (snapshot) => {
+      const highlightData = snapshot.docs.map((docSnap) => {
+        const data = docSnap.data() as any;
+        return {
+          id: docSnap.id,
+          ...data,
+          createdAt: data.createdAt?.toMillis?.() || data.createdAt || Date.now(),
+        } as Highlight;
+      });
+      setHighlights(highlightData);
+    });
+
+    return () => {
+      unsubscribePosts();
+      unsubscribeHighlights();
+    };
   }, [uid]);
 
   const handleStartChat = async () => {
