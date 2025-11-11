@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
 import { useProfileComplete } from "@/hooks/useProfileComplete";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, setPersistence, browserLocalPersistence } from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -19,16 +19,37 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [userType, setUserType] = useState<"athlete" | "coach" | "">("");
+
+  useEffect(() => {
+    if (!user) {
+      setUserType("");
+      return;
+    }
+
+    const unsubscribe = onSnapshot(
+      doc(db, "users", user.uid),
+      (snapshot) => {
+        const data = snapshot.data();
+        setUserType((data?.userType as "athlete" | "coach") || "");
+      },
+      () => setUserType("")
+    );
+
+    return () => unsubscribe();
+  }, [user]);
 
   useEffect(() => {
     if (!loading && !profileLoading && user) {
-      if (!isComplete) {
+      if (!userType) {
+        router.push("/role");
+      } else if (!isComplete) {
         router.push("/profile");
       } else {
         router.push("/home");
       }
     }
-  }, [user, loading, profileLoading, isComplete, router]);
+  }, [user, loading, profileLoading, isComplete, userType, router]);
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +78,7 @@ export default function LoginPage() {
         });
 
         console.log("User profile created automatically:", user.uid);
-        router.push("/profile");
+        router.push("/role");
       } else {
         await signInWithEmailAndPassword(auth, email, password);
         // Profile check will redirect via useEffect
@@ -102,7 +123,7 @@ export default function LoginPage() {
           createdAt: Math.floor(Date.now() / 1000),
         });
         console.log("User profile created automatically:", user.uid);
-        router.push("/profile");
+        router.push("/role");
       } else {
         // Profile check will redirect via useEffect
       }

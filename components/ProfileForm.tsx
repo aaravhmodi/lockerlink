@@ -134,55 +134,6 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
   const [spikeTouch, setSpikeTouch] = useState<string>("");
   const isCoach = formData.userType === "coach";
 
-  const handleUserTypeSelect = (nextType: "athlete" | "coach") => {
-    if (formData.userType === nextType) return;
-
-    if (nextType === "coach") {
-      setHeightFeet("");
-      setHeightInches("");
-      setVerticalInches("");
-      setWeightLbs("");
-      setBlockTouch("");
-      setStandingTouch("");
-      setSpikeTouch("");
-      setFormData((prev) => ({
-        ...prev,
-        userType: nextType,
-        height: "",
-        vertical: "",
-        weight: "",
-        position: "",
-        secondaryPosition: "",
-        ageGroup: "",
-        birthMonth: "",
-        birthYear: "",
-        blockTouch: "",
-        standingTouch: "",
-        spikeTouch: "",
-        points: 0,
-        division: prev.division || "",
-      }));
-    } else {
-      const heightParts = parseHeightValue(formData.height);
-      const verticalValue = parseNumericValue(formData.vertical);
-      const weightValue = parseNumericValue(formData.weight);
-      const blockValue = parseNumericValue(formData.blockTouch);
-      const standingValue = parseNumericValue(formData.standingTouch);
-      const spikeValue = parseNumericValue(formData.spikeTouch);
-      setHeightFeet(heightParts.feet);
-      setHeightInches(heightParts.inches);
-      setVerticalInches(verticalValue);
-      setWeightLbs(weightValue);
-      setBlockTouch(blockValue);
-      setStandingTouch(standingValue);
-      setSpikeTouch(spikeValue);
-      setFormData((prev) => ({
-        ...prev,
-        userType: nextType,
-      }));
-    }
-  };
-
   useEffect(() => {
     const fetchProfile = async () => {
       if (!user) return;
@@ -647,28 +598,13 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         </div>
       </div>
       <div>
-        <label className="mb-2 block text-sm font-medium text-[#111827]">Account Type *</label>
-        <div className="flex gap-3">
-          {[
-            { value: "athlete", label: "Athlete" },
-            { value: "coach", label: "Coach" },
-          ].map((option) => {
-            const isActive = formData.userType === option.value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => handleUserTypeSelect(option.value as "athlete" | "coach")}
-                className={`flex-1 rounded-xl border px-4 py-2 text-sm font-medium transition-all ${
-                  isActive
-                    ? "border-[#007AFF] bg-[#E0F2FF] text-[#0F172A]"
-                    : "border-[#E5E7EB] bg-white text-[#111827] hover:border-[#007AFF]/60"
-                }`}
-              >
-                {option.label}
-              </button>
-            );
-          })}
+        <label className="mb-2 block text-sm font-medium text-[#111827]">Account Type</label>
+        <div
+          className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold ${
+            isCoach ? "border-emerald-200 bg-emerald-50 text-emerald-600" : "border-blue-200 bg-blue-50 text-[#1D4ED8]"
+          }`}
+        >
+          {isCoach ? "Coach" : "Athlete"}
         </div>
       </div>
 
