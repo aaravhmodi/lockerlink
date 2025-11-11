@@ -14,7 +14,6 @@ import Link from "next/link";
 import FeedCard from "@/components/FeedCard";
 import PostComposer from "@/components/PostComposer";
 import ManagePostsModal from "@/components/ManagePostsModal";
-import BackButton from "@/components/BackButton";
 
 interface UserProfile {
   name: string;
@@ -308,8 +307,6 @@ export default function HomePage() {
       <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white pb-20 md:pb-0">
         <Navbar />
         <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-0 pb-4 md:py-4 sm:py-8">
-          <BackButton fallback="/" className="mb-4" />
-
           {/* About section */}
           <motion.div
             initial={{ opacity: 0, y: 15 }}
