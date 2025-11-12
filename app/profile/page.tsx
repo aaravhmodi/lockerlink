@@ -1225,12 +1225,12 @@ export default function ProfilePage() {
           )}
 
           {/* Action buttons */}
-          <div className="pt-4 flex flex-col gap-3 sm:flex-row">
+          <div className="pt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
             <motion.button
               onClick={() => setShowEditForm(true)}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="flex-1 sm:flex-none items-center justify-center gap-2 rounded-xl bg-[#3B82F6] px-6 py-3 text-white font-medium transition-all duration-200 hover:bg-[#2563EB] shadow-sm hover:shadow-md touch-manipulation min-h-[44px]"
+              className="w-full items-center justify-center gap-1.5 rounded-lg bg-[#3B82F6] px-3 py-2 text-white text-sm font-medium transition-all duration-200 hover:bg-[#2563EB] shadow-sm hover:shadow-md touch-manipulation min-h-[40px]"
             >
               Edit Profile
             </motion.button>
@@ -1239,7 +1239,7 @@ export default function ProfilePage() {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="flex-1 sm:flex-none items-center justify-center gap-2 rounded-xl border-2 border-[#3B82F6] bg-white px-6 py-3 text-[#3B82F6] font-medium transition-all duration-200 hover:bg-blue-50 touch-manipulation min-h-[44px]"
+                  className="w-full items-center justify-center gap-1.5 rounded-lg border-2 border-[#3B82F6] bg-white px-3 py-2 text-[#3B82F6] text-sm font-medium transition-all duration-200 hover:bg-blue-50 touch-manipulation min-h-[40px]"
                 >
                   Find Match
                 </motion.button>
@@ -1249,7 +1249,7 @@ export default function ProfilePage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setShowManagePosts(true)}
-              className="flex-1 sm:flex-none items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3 text-slate-600 font-medium transition-all duration-200 hover:bg-slate-50 touch-manipulation min-h-[44px]"
+              className={`w-full items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-600 text-sm font-medium transition-all duration-200 hover:bg-slate-50 touch-manipulation min-h-[40px] ${isAthleteProfile ? '' : 'sm:col-span-2'}`}
             >
               Manage Posts
             </motion.button>
@@ -1257,10 +1257,11 @@ export default function ProfilePage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setShowSwitchUserTypeModal(true)}
-              className="flex-1 sm:flex-none items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-6 py-3 text-red-600 font-medium transition-all duration-200 hover:bg-red-100 touch-manipulation min-h-[44px]"
+              className="w-full items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-red-600 text-sm font-medium transition-all duration-200 hover:bg-red-100 touch-manipulation min-h-[40px]"
             >
-              <RefreshCw className="w-4 h-4" />
-              Switch User Type
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Switch User Type</span>
+              <span className="sm:hidden">Switch</span>
             </motion.button>
           </div>
         </div>
