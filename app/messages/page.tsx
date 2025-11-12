@@ -34,7 +34,7 @@ export default function MessagesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [modalSearchQuery, setModalSearchQuery] = useState("");
   const [searching, setSearching] = useState(false);
-  const [userType, setUserType] = useState<"athlete" | "coach" | "">("");
+  const [userType, setUserType] = useState<"athlete" | "coach" | "admin" | "mentor" | "">("");
 
   // Debounced search for modal users
   useEffect(() => {
@@ -87,7 +87,7 @@ export default function MessagesPage() {
 
     const unsubscribe = onSnapshot(doc(db, "users", user.uid), (snapshot) => {
       const data = snapshot.data();
-      setUserType((data?.userType as "athlete" | "coach") || "athlete");
+      setUserType((data?.userType as "athlete" | "coach" | "admin" | "mentor") || "athlete");
     });
 
     return () => unsubscribe();

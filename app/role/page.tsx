@@ -13,7 +13,7 @@ const ROLE_OPTIONS = [
     type: "athlete" as const,
     title: "I'm an Athlete",
     subtitle: "Build your profile, share highlights, and get noticed.",
-    accent: "from-sky-100 via-white to-indigo-100",
+    accent: "from-sky-100 via-white to-blue-200",
     icon: Trophy,
     welcome: "Welcome to the LockerLink squad. Let's make waves this season!",
   },
@@ -21,15 +21,23 @@ const ROLE_OPTIONS = [
     type: "coach" as const,
     title: "I'm a Coach",
     subtitle: "Scout talent, share guidance, and support athlete growth.",
-    accent: "from-emerald-100 via-white to-amber-100",
+    accent: "from-emerald-100 via-white to-lime-200",
     icon: Users,
     welcome: "Welcome to the LockerLink bench. Time to lead the next generation!",
+  },
+  {
+    type: "mentor" as const,
+    title: "I'm a Mentor",
+    subtitle: "Share your experience, support developing players, and stay connected to the game.",
+    accent: "from-violet-100 via-white to-indigo-200",
+    icon: Sparkles,
+    welcome: "Welcome to the LockerLink rafters. Thanks for guiding the next wave of talent!",
   },
   {
     type: "admin" as const,
     title: "I'm an Admin / Parent",
     subtitle: "Keep a clear view on players you support and help them thrive.",
-    accent: "from-amber-100 via-white to-slate-100",
+    accent: "from-amber-100 via-white to-rose-200",
     icon: Star,
     welcome: "Welcome to the LockerLink stands. Thanks for cheering and keeping players safe!",
   },
@@ -38,11 +46,11 @@ const ROLE_OPTIONS = [
 export default function RoleSelectPage() {
   const { user, loading } = useUser();
   const router = useRouter();
-  const [currentRole, setCurrentRole] = useState<"athlete" | "coach" | "admin" | "">("");
+  const [currentRole, setCurrentRole] = useState<"athlete" | "coach" | "admin" | "mentor" | "">("");
   const [displayName, setDisplayName] = useState<string>("");
   const [loadingRole, setLoadingRole] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<"athlete" | "coach" | "admin" | null>(null);
+  const [selectedRole, setSelectedRole] = useState<"athlete" | "coach" | "admin" | "mentor" | null>(null);
   const [welcomeMessage, setWelcomeMessage] = useState("");
 
   useEffect(() => {
@@ -59,7 +67,7 @@ export default function RoleSelectPage() {
         const userDoc = await getDoc(doc(db, "users", user.uid));
         if (userDoc.exists()) {
           const data = userDoc.data() as any;
-          const userType = data?.userType as "athlete" | "coach" | "admin" | undefined;
+          const userType = data?.userType as "athlete" | "coach" | "admin" | "mentor" | undefined;
           if (userType) {
             setCurrentRole(userType);
             router.replace("/profile");
@@ -77,7 +85,7 @@ export default function RoleSelectPage() {
     fetchRole();
   }, [user, router]);
 
-  const handleSelect = async (role: "athlete" | "coach" | "admin") => {
+  const handleSelect = async (role: "athlete" | "coach" | "admin" | "mentor") => {
     if (!user || saving) return;
     setSaving(true);
     setSelectedRole(role);
@@ -115,7 +123,7 @@ export default function RoleSelectPage() {
           blockTouch: "",
           standingTouch: "",
           spikeTouch: "",
-          adminRole: "",
+          adminRole: "parent",
         });
       }
 
@@ -191,7 +199,9 @@ export default function RoleSelectPage() {
                       ? "Athlete Mode"
                       : option.type === "coach"
                         ? "Coach Mode"
-                        : "Admin Mode"}
+                        : option.type === "mentor"
+                          ? "Mentor Mode"
+                          : "Admin Mode"}
                   </div>
                   <div>
                     <h2 className="text-2xl font-semibold text-[#0F172A]">{option.title}</h2>

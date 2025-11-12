@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
-import { collection, query, where, getDocs, orderBy, limit, onSnapshot, updateDoc, doc, increment, arrayUnion, arrayRemove } from "firebase/firestore";
+import { collection, query, where, getDocs, orderBy, limit, onSnapshot, updateDoc, doc, getDoc, increment, arrayUnion, arrayRemove } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Navbar from "@/components/Navbar";
 import ProfileGuard from "@/components/ProfileGuard";
@@ -32,6 +32,8 @@ interface Highlight {
   userName?: string;
   userUsername?: string;
   userPhotoURL?: string;
+  userType?: "athlete" | "coach" | "admin" | "mentor";
+  adminRole?: "parent" | "clubAdmin" | "";
   title: string;
   thumbnailURL?: string;
   videoURL?: string;
@@ -98,17 +100,35 @@ export default function ExplorePage() {
       limit(12)
     );
 
-    const unsubscribeHighlights = onSnapshot(highlightsQuery, (snapshot) => {
-      const highlightData = snapshot.docs.map((docSnap) => {
+    const unsubscribeHighlights = onSnapshot(highlightsQuery, async (snapshot) => {
+      const highlightDataPromises = snapshot.docs.map(async (docSnap) => {
         const data = docSnap.data() as any;
+        // Fetch user type from user document
+        let userType: "athlete" | "coach" | "admin" | "mentor" | undefined;
+        let adminRole: "parent" | "clubAdmin" | "" | undefined;
+        if (data.userId) {
+          try {
+            const userDoc = await getDoc(doc(db, "users", data.userId));
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              userType = userData.userType;
+              adminRole = userData.adminRole;
+            }
+          } catch (error) {
+            console.error("Error fetching user type:", error);
+          }
+        }
         return {
           id: docSnap.id,
           ...data,
+          userType,
+          adminRole,
           upvotes: data.upvotes || 0,
           likedBy: data.likedBy || [],
           commentsCount: data.commentsCount || 0,
         } as Highlight;
       });
+      const highlightData = await Promise.all(highlightDataPromises);
       setHighlights(highlightData);
       setLoadingHighlights(false);
     }, (error) => {
@@ -336,7 +356,7 @@ export default function ExplorePage() {
                     </Link>
                     <div className="flex flex-1 flex-col p-4">
                       <div className="flex items-center gap-3 mb-3">
-                        <Link href={`/profile/${highlight.userId}`} className="flex items-center gap-3">
+                        <Link href={`/profile/${highlight.userId}`} className="flex items-center gap-3 flex-1 min-w-0">
                           <div className="h-10 w-10 overflow-hidden rounded-full bg-[#F3F4F6]">
                             {highlight.userPhotoURL ? (
                               <Image
@@ -352,8 +372,31 @@ export default function ExplorePage() {
                               </div>
                             )}
                           </div>
-                          <div className="min-w-0">
-                            <p className="truncate font-semibold text-[#111827]">{highlight.userName || "Player"}</p>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="truncate font-semibold text-[#111827]">{highlight.userName || "Player"}</p>
+                              {highlight.userType && (
+                                <span
+                                  className={`inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-medium flex-shrink-0 ${
+                                    highlight.userType === "athlete"
+                                      ? "bg-blue-50 text-[#3B82F6]"
+                                      : highlight.userType === "mentor"
+                                      ? "bg-purple-50 text-purple-700"
+                                      : highlight.userType === "coach"
+                                      ? "bg-green-50 text-green-700"
+                                      : highlight.userType === "admin"
+                                      ? "bg-orange-50 text-orange-700"
+                                      : "bg-slate-50 text-slate-700"
+                                  }`}
+                                >
+                                  {highlight.userType === "admin"
+                                    ? highlight.adminRole === "clubAdmin"
+                                      ? "Club Admin"
+                                      : "Parent/Guardian"
+                                    : highlight.userType.charAt(0).toUpperCase() + highlight.userType.slice(1)}
+                                </span>
+                              )}
+                            </div>
                             {highlight.userUsername && (
                               <p className="truncate text-xs text-[#9CA3AF]">@{highlight.userUsername}</p>
                             )}

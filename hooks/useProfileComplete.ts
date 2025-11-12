@@ -35,6 +35,7 @@ export function useProfileComplete() {
         const data = snapshot.data();
         const isCoach = data.userType === "coach";
         const isAdmin = data.userType === "admin";
+        const isMentor = data.userType === "mentor";
         const hasRequiredFields = (() => {
           if (isCoach) {
             return (
@@ -47,13 +48,27 @@ export function useProfileComplete() {
           }
 
           if (isAdmin) {
-            const isClubAdmin = data.adminRole === "clubAdmin";
+            const adminRole = data.adminRole || "parent";
+            const isClubAdmin = adminRole === "clubAdmin";
             return (
               data.username &&
               data.name &&
               data.userType &&
-              data.adminRole &&
+              adminRole &&
               (!isClubAdmin || data.team)
+            );
+          }
+
+          if (isMentor) {
+            return (
+              data.username &&
+              data.name &&
+              data.userType &&
+              data.birthMonth &&
+              data.birthYear &&
+              data.height &&
+              data.volleyballBackground &&
+              true
             );
           }
 
@@ -75,11 +90,10 @@ export function useProfileComplete() {
         })();
 
         const hasHighlight = !!data.hasHighlight;
-        const completeStatus = isCoach
-          ? !!hasRequiredFields
-          : isAdmin
-            ? !!hasRequiredFields
-            : !!hasRequiredFields && hasHighlight;
+        const needsHighlight = !isCoach && !isAdmin; // Athletes and mentors need highlights
+        const completeStatus = needsHighlight
+          ? !!hasRequiredFields && hasHighlight
+          : !!hasRequiredFields;
 
         setIsComplete(completeStatus);
         setLoading(false);

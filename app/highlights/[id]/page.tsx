@@ -33,6 +33,8 @@ interface Highlight {
   userPhotoURL?: string;
   userUsername?: string;
   userPosition?: string;
+  userType?: "athlete" | "coach" | "admin" | "mentor";
+  adminRole?: "parent" | "clubAdmin" | "";
   videoURL?: string;
   thumbnailURL?: string;
   title: string;
@@ -87,9 +89,26 @@ export default function HighlightViewerPage({ params }: { params: Promise<{ id: 
         }
 
         const data = highlightDoc.data() as any;
+        // Fetch user type from user document
+        let userType: "athlete" | "coach" | "admin" | "mentor" | undefined;
+        let adminRole: "parent" | "clubAdmin" | "" | undefined;
+        if (data.userId) {
+          try {
+            const userDoc = await getDoc(doc(db, "users", data.userId));
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              userType = userData.userType;
+              adminRole = userData.adminRole;
+            }
+          } catch (error) {
+            console.error("Error fetching user type:", error);
+          }
+        }
         const formattedHighlight: Highlight = {
           id: highlightDoc.id,
           ...data,
+          userType,
+          adminRole,
           createdAt: data.createdAt?.toMillis?.() || data.createdAt || Date.now(),
           upvotes: data.upvotes || 0,
           likedBy: data.likedBy || [],
@@ -353,9 +372,32 @@ export default function HighlightViewerPage({ params }: { params: Promise<{ id: 
               </Link>
               <div className="flex-1 min-w-0">
                 <Link href={`/profile/${highlight.userId}`}>
-                  <h3 className="font-semibold text-[#0F172A] hover:text-[#3B82F6] transition-colors">
-                    {highlight.userName || "Anonymous"}
-                  </h3>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-semibold text-[#0F172A] hover:text-[#3B82F6] transition-colors">
+                      {highlight.userName || "Anonymous"}
+                    </h3>
+                    {highlight.userType && (
+                      <span
+                        className={`inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                          highlight.userType === "athlete"
+                            ? "bg-blue-50 text-[#3B82F6]"
+                            : highlight.userType === "mentor"
+                            ? "bg-purple-50 text-purple-700"
+                            : highlight.userType === "coach"
+                            ? "bg-green-50 text-green-700"
+                            : highlight.userType === "admin"
+                            ? "bg-orange-50 text-orange-700"
+                            : "bg-slate-50 text-slate-700"
+                        }`}
+                      >
+                        {highlight.userType === "admin"
+                          ? highlight.adminRole === "clubAdmin"
+                            ? "Club Admin"
+                            : "Parent/Guardian"
+                          : highlight.userType.charAt(0).toUpperCase() + highlight.userType.slice(1)}
+                      </span>
+                    )}
+                  </div>
                 </Link>
                 {highlight.userUsername && (
                   <p className="text-sm text-slate-500">@{highlight.userUsername}</p>

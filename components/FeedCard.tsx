@@ -37,6 +37,8 @@ interface User {
   name: string;
   photoURL?: string;
   team?: string;
+  userType?: "athlete" | "coach" | "admin" | "mentor";
+  adminRole?: "parent" | "clubAdmin" | "";
 }
 
 interface FeedCardProps {
@@ -210,7 +212,30 @@ export default function FeedCard({ post }: FeedCardProps) {
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-semibold text-[#111827] truncate">{user?.name || "Unknown"}</div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="font-semibold text-[#111827] truncate">{user?.name || "Unknown"}</div>
+            {user?.userType && (
+              <span
+                className={`inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                  user.userType === "athlete"
+                    ? "bg-blue-50 text-[#3B82F6]"
+                    : user.userType === "mentor"
+                    ? "bg-purple-50 text-purple-700"
+                    : user.userType === "coach"
+                    ? "bg-green-50 text-green-700"
+                    : user.userType === "admin"
+                    ? "bg-orange-50 text-orange-700"
+                    : "bg-slate-50 text-slate-700"
+                }`}
+              >
+                {user.userType === "admin"
+                  ? user.adminRole === "clubAdmin"
+                    ? "Club Admin"
+                    : "Parent/Guardian"
+                  : user.userType.charAt(0).toUpperCase() + user.userType.slice(1)}
+              </span>
+            )}
+          </div>
           {user?.team && (
             <div className="text-sm text-[#6B7280] truncate">{user.team}</div>
           )}

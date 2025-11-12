@@ -3,7 +3,7 @@
 import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
-import { doc, getDoc, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, getDocs, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Navbar from "@/components/Navbar";
 import FeedCard from "@/components/FeedCard";
@@ -92,9 +92,16 @@ interface ViewedProfile {
   spikeTouch?: string;
   division?: string;
   coachMessage?: string;
-  userType?: "athlete" | "coach";
+  userType?: "athlete" | "coach" | "admin" | "mentor";
   ogLockerLinkUser?: boolean;
   points?: number;
+  adminRole?: string;
+  university?: string;
+  experienceYears?: number;
+  volleyballBackground?: string;
+  focusAreas?: string;
+  achievements?: string;
+  contactLink?: string;
 }
 
 export default function UserProfilePage({ params }: { params: Promise<{ uid: string }> }) {
@@ -104,7 +111,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
   const [profile, setProfile] = useState<ViewedProfile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [highlights, setHighlights] = useState<Highlight[]>([]);
-  const [viewerType, setViewerType] = useState<"athlete" | "coach" | "">("");
+  const [viewerType, setViewerType] = useState<"athlete" | "coach" | "admin" | "mentor" | "">("");
 
   useEffect(() => {
     if (!loading && !currentUser) {
@@ -120,7 +127,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
 
     const unsubscribe = onSnapshot(doc(db, "users", currentUser.uid), (snapshot) => {
       const data = snapshot.data();
-      setViewerType((data?.userType as "athlete" | "coach") || "athlete");
+      setViewerType((data?.userType as "athlete" | "coach" | "admin" | "mentor") || "athlete");
     });
 
     return () => unsubscribe();
@@ -132,6 +139,14 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
         const userDoc = await getDoc(doc(db, "users", uid));
         if (userDoc.exists()) {
           const data = userDoc.data() as any;
+          const resolvedAdminRole = data.userType === "admin" ? (data.adminRole || "parent") : undefined;
+          if (data.userType === "admin" && !data.adminRole) {
+            try {
+              await setDoc(doc(db, "users", uid), { adminRole: "parent" }, { merge: true });
+            } catch (error) {
+              console.error("Error setting default admin role for viewed profile:", error);
+            }
+          }
           setProfile({
             ...data,
             username: data.username || "",
@@ -149,7 +164,9 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
                         : undefined
                 : undefined),
             points: typeof data.points === "number" ? data.points : 0,
-            userType: (data.userType as "athlete" | "coach") || "athlete",
+            userType: (data.userType as "athlete" | "coach" | "admin" | "mentor") || "athlete",
+            adminRole: resolvedAdminRole,
+            university: data.university || "",
           });
         }
       } catch (error) {
@@ -263,8 +280,11 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
 
   const isOwnProfile = currentUser?.uid === uid;
   const isCoachProfile = profile?.userType === "coach";
+  const isAdminProfile = profile?.userType === "admin";
+  const isMentorProfile = profile?.userType === "mentor";
+  const isAthleteProfile = profile?.userType === "athlete" || profile?.userType === "mentor";
   const derivedAge = calculateAge(profile.birthMonth, profile.birthYear);
-  const athleteStatCards = !isCoachProfile
+  const athleteStatCards = !isCoachProfile && !isMentorProfile
     ? [
         { label: "Age", value: derivedAge !== undefined ? `${derivedAge}` : "—" },
         { label: "Height", value: formatHeight(profile.height) },
@@ -276,11 +296,40 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
         { label: "Points", value: profile.points !== undefined ? `${profile.points}` : "0" },
       ]
     : [];
+  const coachInfoCards = isCoachProfile
+    ? [
+        profile.team ? { label: "TEAM", value: profile.team } : null,
+        profile.city ? { label: "REGION", value: profile.city } : null,
+        profile.division ? { label: "DIVISION", value: profile.division } : null,
+        profile.ageGroup ? { label: "AGE GROUP", value: profile.ageGroup } : null,
+      ].filter(Boolean) as { label: string; value: string }[]
+    : [];
+
   const coachStatCards = isCoachProfile
     ? [
-        profile.team ? { label: "Team / Club", value: profile.team } : null,
-        profile.division ? { label: "Division", value: profile.division } : null,
-        profile.city ? { label: "Region", value: profile.city } : null,
+        {
+          label: "Community Posts",
+          value: posts.length.toString(),
+        },
+      ]
+    : [];
+  const mentorCards = isMentorProfile
+    ? [
+        derivedAge !== undefined ? { label: "Age", value: `${derivedAge}` } : null,
+        profile.height ? { label: "Height", value: formatHeight(profile.height) } : null,
+        profile.university ? { label: "University", value: profile.university } : null,
+        profile.experienceYears ? { label: "Experience", value: `${profile.experienceYears} years` } : null,
+        profile.city ? { label: "City", value: profile.city } : null,
+      ].filter(Boolean) as { label: string; value: string }[]
+    : [];
+  const mentorInfoCards = isMentorProfile
+    ? [
+        profile.university
+          ? { label: "University", value: profile.university }
+          : null,
+        profile.city
+          ? { label: "City", value: profile.city }
+          : null,
       ].filter(Boolean) as { label: string; value: string }[]
     : [];
 
@@ -352,64 +401,142 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
                       {profile.position}
                     </span>
                   )}
-                  {!isCoachProfile && profile.secondaryPosition && (
+                  {isAthleteProfile && profile.secondaryPosition && (
                   <span className="inline-flex justify-center rounded-full bg-blue-50 text-[#1D4ED8] px-3 py-1 text-xs font-semibold uppercase tracking-wide">
                       Secondary: {profile.secondaryPosition}
                     </span>
                   )}
-                  {!isCoachProfile && profile.ageGroup && (
+                  {isAthleteProfile && profile.ageGroup && (
                   <span className="inline-flex justify-center rounded-full bg-blue-50 text-[#3B82F6] px-3 py-1 text-sm font-medium">
                       {profile.ageGroup}
                     </span>
                   )}
-                  {profile.userType && (
-                    <span
-                      className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-                        profile.userType === "coach"
-                          ? "bg-emerald-50 border-emerald-200 text-emerald-600"
-                          : "bg-blue-50 border-blue-200 text-blue-600 hidden sm:inline-flex"
-                      }`}
-                    >
-                      {profile.userType === "coach" ? "Coach" : "Athlete"}
+                  {isAthleteProfile && (
+                    <span className="inline-flex justify-center rounded-full bg-blue-50 text-[#3B82F6] px-3 py-1 text-sm font-medium">
+                      Athlete
+                    </span>
+                  )}
+                  {isMentorProfile && (
+                    <span className="inline-flex justify-center rounded-full bg-purple-50 text-purple-700 px-3 py-1 text-sm font-medium">
+                      Mentor
+                    </span>
+                  )}
+                  {isCoachProfile && (
+                    <span className="inline-flex justify-center rounded-full bg-green-50 text-green-700 px-3 py-1 text-sm font-medium">
+                      Coach
+                    </span>
+                  )}
+                  {isAdminProfile && (
+                    <span className="inline-flex justify-center rounded-full bg-orange-50 text-orange-700 px-3 py-1 text-sm font-medium">
+                      {profile.adminRole === "clubAdmin" ? "Club Admin" : "Parent/Guardian"}
                     </span>
                   )}
                 </div>
               </div>
 
-              {!isCoachProfile && athleteStatCards.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 pt-4 sm:pt-6 border-t border-[#E5E7EB]">
-                  {athleteStatCards.map((card) => (
-                    <div key={card.label} className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
+              {/* Coach Info Cards - Team, Region, Division, Age Group */}
+              {isCoachProfile && coachInfoCards.length > 0 && (
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
+                  {coachInfoCards.map((card) => (
+                    <div key={card.label} className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
                       <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">
                         {card.label}
                       </p>
-                      <p className="text-xl font-semibold text-[#111827]">{card.value}</p>
-                      {card.label === "Points" && (
-                        <span className="mt-1 inline-flex items-center justify-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
-                          BETA
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-              {isCoachProfile && coachStatCards.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 pt-4 sm:pt-6 border-t border-[#E5E7EB]">
-                  {coachStatCards.map((card) => (
-                    <div key={card.label} className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
-                      <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">
-                        {card.label}
-                      </p>
-                      <p className="text-xl font-semibold text-[#111827]">{card.value}</p>
+                      <p className="text-base font-semibold text-[#111827]">{card.value}</p>
                     </div>
                   ))}
                 </div>
               )}
 
-              {!isCoachProfile && profile.bio && (
+              {!isCoachProfile && !isMentorProfile && athleteStatCards.length > 0 && (
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                  {athleteStatCards.map((card) => (
+                    <div key={card.label} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center">
+                      <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">
+                        {card.label}
+                      </p>
+                      <p className="text-lg font-semibold text-[#111827]">{card.value}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {isCoachProfile && coachStatCards.length > 0 && (
+                <div className="grid grid-cols-1 gap-3 sm:gap-4">
+                  {coachStatCards.map((card) => (
+                    <div key={card.label} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center">
+                      <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">
+                        {card.label}
+                      </p>
+                      <p className="text-lg font-semibold text-[#111827]">{card.value}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {isMentorProfile && mentorCards.length > 0 && (
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                  {mentorCards.map((card) => (
+                    <div key={card.label} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center">
+                      <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">
+                        {card.label}
+                      </p>
+                      <p className="text-lg font-semibold text-[#111827]">{card.value}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {isMentorProfile && mentorInfoCards.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6 pt-4 sm:pt-6 border-t border-[#E5E7EB]">
+                  {mentorInfoCards.map((card) => (
+                    <div key={card.label} className="rounded-2xl bg-slate-50 p-4 text-center shadow-sm">
+                      <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-1">
+                        {card.label}
+                      </p>
+                      <p className="text-xl font-semibold text-[#111827]">{card.value}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {!isCoachProfile && !isMentorProfile && profile.bio && (
                 <div className="pt-6 border-t border-[#E5E7EB]">
                   <p className="text-sm font-semibold text-[#6B7280] uppercase tracking-wide mb-3">About</p>
                   <p className="text-[#111827] leading-relaxed">{profile.bio}</p>
+                </div>
+              )}
+              {isMentorProfile && profile.bio && (
+                <div className="pt-6 border-t border-[#E5E7EB]">
+                  <p className="text-sm font-semibold text-[#6B7280] uppercase tracking-wide mb-3">About</p>
+                  <p className="text-[#111827] leading-relaxed whitespace-pre-line">{profile.bio}</p>
+                </div>
+              )}
+              {isMentorProfile && profile.volleyballBackground && (
+                <div className="pt-6 border-t border-[#E5E7EB]">
+                  <p className="text-sm font-semibold text-[#6B7280] uppercase tracking-wide mb-3">Volleyball Background</p>
+                  <p className="text-[#111827] leading-relaxed whitespace-pre-line">{profile.volleyballBackground}</p>
+                </div>
+              )}
+              {isMentorProfile && profile.focusAreas && (
+                <div className="pt-6 border-t border-[#E5E7EB]">
+                  <p className="text-sm font-semibold text-indigo-700 uppercase tracking-wide mb-3">Focus Areas</p>
+                  <p className="text-[#1F2937] leading-relaxed whitespace-pre-line">{profile.focusAreas}</p>
+                </div>
+              )}
+              {isMentorProfile && profile.achievements && (
+                <div className="pt-6 border-t border-[#E5E7EB]">
+                  <p className="text-sm font-semibold text-[#B45309] uppercase tracking-wide mb-3">Achievements</p>
+                  <p className="text-[#92400E] leading-relaxed whitespace-pre-line">{profile.achievements}</p>
+                </div>
+              )}
+              {isMentorProfile && profile.contactLink && (
+                <div className="pt-6 border-t border-[#E5E7EB]">
+                  <p className="text-sm font-semibold text-[#6B7280] uppercase tracking-wide mb-3">Connect</p>
+                  <a
+                    href={profile.contactLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-semibold text-[#2563EB] underline break-all"
+                  >
+                    {profile.contactLink}
+                  </a>
                 </div>
               )}
               {isCoachProfile && profile.coachMessage && (
@@ -470,8 +597,8 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
                     ))}
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 px-4 py-10 text-center text-slate-500">
-                    {isCoachProfile ? "No highlights shared yet." : "No highlights uploaded yet."}
+                  <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-slate-600">
+                    No highlights yet. When they upload clips, you’ll find them here.
                   </div>
                 )}
               </div>

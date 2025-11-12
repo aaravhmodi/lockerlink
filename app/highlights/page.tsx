@@ -54,7 +54,7 @@ export default function HighlightsPage() {
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadDescription, setUploadDescription] = useState("");
   const [submitToChallenge, setSubmitToChallenge] = useState(true);
-  const [userType, setUserType] = useState<"athlete" | "coach" | "">("");
+  const [userType, setUserType] = useState<"athlete" | "coach" | "admin" | "mentor" | "">("");
 
   useEffect(() => {
     if (!user) return;
@@ -69,13 +69,14 @@ export default function HighlightsPage() {
 
     const unsubscribe = onSnapshot(doc(db, "users", user.uid), (snapshot) => {
       const data = snapshot.data();
-      setUserType((data?.userType as "athlete" | "coach") || "athlete");
+      setUserType((data?.userType as "athlete" | "coach" | "admin" | "mentor") || "athlete");
     });
 
     return () => unsubscribe();
   }, [user]);
 
   const isCoach = userType === "coach";
+  const isAdmin = userType === "admin";
 
   const loadData = async () => {
     if (!user) return;
@@ -152,7 +153,7 @@ export default function HighlightsPage() {
   }, [user]);
 
   const handleUpload = async () => {
-    if (!user || isCoach || !videoFile || !uploadTitle.trim() || uploading) return;
+    if (!user || isCoach || isAdmin || !videoFile || !uploadTitle.trim() || uploading) return;
 
     setUploading(true);
     try {

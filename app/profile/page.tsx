@@ -24,6 +24,8 @@ import {
   ArrowUp,
   Zap,
   Star,
+  RefreshCw,
+  AlertTriangle,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -52,12 +54,18 @@ interface UserProfile {
   points?: number;
   photoURL?: string;
   bio?: string;
-  userType?: "athlete" | "coach" | "admin";
+  userType?: "athlete" | "coach" | "admin" | "mentor";
   division?: string;
   coachMessage?: string;
   ogLockerLinkUser?: boolean;
   hasHighlight?: boolean;
   adminRole?: "parent" | "clubAdmin" | "";
+  university?: string;
+  experienceYears?: number;
+  volleyballBackground?: string;
+  focusAreas?: string;
+  achievements?: string;
+  contactLink?: string;
 }
 
 interface Highlight {
@@ -67,11 +75,17 @@ interface Highlight {
   thumbnailURL?: string;
   title: string;
   description?: string;
-  upvotes: number;
-  createdAt: number;
-  views?: number;
+  upvotes?: number;
+  commentsCount?: number;
+  createdAt?: number;
   submittedToChallenge?: boolean;
   challengeId?: string;
+  views?: number;
+}
+
+interface HighlightUploadResponse {
+  secureUrl: string;
+  publicId: string;
 }
 
 interface Post {
@@ -86,7 +100,7 @@ interface Post {
   commentsCount?: number;
 }
 
-const DEFAULT_CHALLENGE_ID = "challenge-1";
+const DEFAULT_CHALLENGE_ID = "lockerlink-main";
 const MONTH_TO_INDEX: Record<string, number> = {
   January: 0,
   February: 1,
@@ -141,6 +155,8 @@ export default function ProfilePage() {
   const [deletingHighlightId, setDeletingHighlightId] = useState<string | null>(null);
   const [hasHighlight, setHasHighlight] = useState(false);
   const [profileFieldsComplete, setProfileFieldsComplete] = useState(false);
+  const [showSwitchUserTypeModal, setShowSwitchUserTypeModal] = useState(false);
+  const [switchingUserType, setSwitchingUserType] = useState(false);
 
   // Auto-show edit form until required profile fields are complete
   useEffect(() => {
@@ -214,6 +230,15 @@ export default function ProfilePage() {
         const isCoachDoc = data.userType === "coach";
         const isAdminDoc = data.userType === "admin";
         const isClubAdminDoc = isAdminDoc && data.adminRole === "clubAdmin";
+        const isMentorDoc = data.userType === "mentor";
+        const resolvedAdminRole = isAdminDoc ? (data.adminRole || "parent") : "";
+        if (isAdminDoc && !data.adminRole) {
+          try {
+            await setDoc(doc(db, "users", user.uid), { adminRole: "parent" }, { merge: true });
+          } catch (error) {
+            console.error("Error setting default admin role:", error);
+          }
+        }
         const fieldsComplete = (() => {
           if (isCoachDoc) {
             return (
@@ -230,8 +255,16 @@ export default function ProfilePage() {
               data.username &&
               data.name &&
               data.userType &&
-              data.adminRole &&
+              resolvedAdminRole &&
               (!isClubAdminDoc || data.team)
+            );
+          }
+
+          if (isMentorDoc) {
+            return (
+              data.username &&
+              data.name &&
+              data.userType
             );
           }
 
@@ -274,7 +307,7 @@ export default function ProfilePage() {
           team: data.team,
           position: data.position,
           secondaryPosition: data.secondaryPosition,
-          ageGroup,
+          ageGroup: data.ageGroup || ageGroup,
           birthMonth: data.birthMonth,
           birthYear: data.birthYear,
           city: data.city,
@@ -286,13 +319,19 @@ export default function ProfilePage() {
           spikeTouch: data.spikeTouch,
           photoURL: data.photoURL,
           bio: data.bio,
-          userType: (data.userType as "athlete" | "coach" | "admin") || "athlete",
+          userType: (data.userType as "athlete" | "coach" | "admin" | "mentor") || "athlete",
           division: data.division,
           coachMessage: data.coachMessage,
           points: typeof data.points === "number" ? data.points : 0,
           ogLockerLinkUser: data.ogLockerLinkUser ?? true,
           hasHighlight: data.hasHighlight,
-          adminRole: (data.adminRole as "parent" | "clubAdmin" | "") || "",
+          adminRole: resolvedAdminRole as "parent" | "clubAdmin" | "",
+          university: data.university || "",
+          experienceYears: data.experienceYears,
+          volleyballBackground: data.volleyballBackground,
+          focusAreas: data.focusAreas,
+          achievements: data.achievements,
+          contactLink: data.contactLink,
         });
       } else {
         setProfileFieldsComplete(false);
@@ -371,13 +410,14 @@ export default function ProfilePage() {
 
   const isCoachProfile = userProfile?.userType === "coach";
   const isAdminProfile = userProfile?.userType === "admin";
+  const isMentorProfile = userProfile?.userType === "mentor";
   const isAthleteProfile = userProfile?.userType === "athlete";
   const isClubAdminProfile = isAdminProfile && userProfile?.adminRole === "clubAdmin";
 
   const handleDeleteHighlight = async (highlightId: string) => {
     if (!user || deletingHighlightId) return;
 
-    const confirmDelete = window.confirm("Delete this highlight? This can’t be undone.");
+    const confirmDelete = window.confirm("Delete this highlight? This can't be undone.");
     if (!confirmDelete) {
       return;
     }
@@ -403,8 +443,66 @@ export default function ProfilePage() {
     }
   };
 
+  const handleSwitchUserType = async () => {
+    if (!user || switchingUserType) return;
+
+    setSwitchingUserType(true);
+    try {
+      // Delete all user's highlights
+      const highlightsQuery = query(collection(db, "highlights"), where("userId", "==", user.uid));
+      const highlightsSnapshot = await getDocs(highlightsQuery);
+      const deleteHighlightPromises = highlightsSnapshot.docs.map((docSnap) => deleteDoc(docSnap.ref));
+      await Promise.all(deleteHighlightPromises);
+
+      // Clear all profile data except essential auth fields (name, email, photoURL)
+      await setDoc(
+        doc(db, "users", user.uid),
+        {
+          userType: "",
+          username: "",
+          team: "",
+          city: "",
+          position: "",
+          secondaryPosition: "",
+          ageGroup: "",
+          birthMonth: "",
+          birthYear: "",
+          height: "",
+          vertical: "",
+          weight: "",
+          blockTouch: "",
+          standingTouch: "",
+          spikeTouch: "",
+          division: "",
+          coachMessage: "",
+          bio: "",
+          adminRole: "",
+          university: "",
+          experienceYears: "",
+          volleyballBackground: "",
+          focusAreas: "",
+          achievements: "",
+          contactLink: "",
+          hasHighlight: false,
+          points: 0,
+          // Keep name, email, photoURL, ogLockerLinkUser from existing data
+        },
+        { merge: true }
+      );
+
+      // Close modal and redirect to role selection
+      setShowSwitchUserTypeModal(false);
+      router.push("/role");
+    } catch (error) {
+      console.error("Error switching user type:", error);
+      alert("Failed to switch user type. Please try again.");
+      setSwitchingUserType(false);
+    }
+  };
+
   const handleUpload = async () => {
     if (!user || isCoachProfile || isAdminProfile || !videoFile || !uploadTitle.trim() || uploading) return;
+    // Allow athletes and mentors to upload highlights
 
     setUploading(true);
     try {
@@ -461,55 +559,65 @@ export default function ProfilePage() {
     }
   };
 
-  const coachInfoCards = isCoachProfile
-    ? [
-        {
-          label: "Team / Club",
-          value: userProfile?.team,
-          icon: Users,
-        },
-        {
-          label: "Division",
-          value: userProfile?.division,
-          icon: Award,
-        },
-        {
-          label: "Region",
-          value: userProfile?.city,
-          icon: MapPin,
-        },
-      ].filter((card) => card.value)
-    : [];
   const derivedAge = calculateAge(userProfile?.birthMonth, userProfile?.birthYear);
 
   const athleteInfoCards = isAthleteProfile
     ? [
         userProfile?.team
           ? {
-              label: "Current Team",
+              label: "TEAM",
               value: userProfile.team,
             }
           : null,
         userProfile?.city
           ? {
-              label: "City",
+              label: "CITY",
               value: userProfile.city,
             }
           : null,
         userProfile?.ageGroup
           ? {
-              label: "Age Group",
+              label: "AGE GROUP",
               value: userProfile.ageGroup,
             }
           : null,
         derivedAge !== undefined
           ? {
-              label: "Age",
+              label: "AGE",
               value: `${derivedAge}`,
             }
           : null,
       ].filter(Boolean) as { label: string; value: string }[]
     : [];
+  const coachInfoCards = isCoachProfile
+    ? [
+        userProfile?.team
+          ? {
+              label: "TEAM",
+              value: userProfile.team,
+            }
+          : null,
+        userProfile?.city
+          ? {
+              label: "REGION",
+              value: userProfile.city,
+            }
+          : null,
+        userProfile?.division
+          ? {
+              label: "DIVISION",
+              value: userProfile.division,
+            }
+          : null,
+        userProfile?.ageGroup
+          ? {
+              label: "AGE GROUP",
+              value: userProfile.ageGroup,
+            }
+          : null,
+      ].filter(Boolean) as { label: string; value: string }[]
+    : [];
+
   const adminInfoCards = isAdminProfile
     ? [
         {
@@ -524,6 +632,13 @@ export default function ProfilePage() {
               icon: Users,
             }
           : null,
+        userProfile?.university
+          ? {
+              label: "University",
+              value: userProfile.university,
+              icon: Sparkles,
+            }
+          : null,
         userProfile?.city
           ? {
               label: "Region / City",
@@ -534,14 +649,114 @@ export default function ProfilePage() {
       ].filter(Boolean) as { label: string; value: string; icon: any }[]
     : [];
 
+  // Athlete stats (8 cards: Height, Vertical, Weight, Highlights, Points, Block Touch, Standing Touch, Spike Touch)
+  const athleteStats: { label: string; value: string; icon: any; badge?: string }[] = (() => {
+    if (!isAthleteProfile) return [];
+
+    return [
+      {
+        label: "Height",
+        value: formatHeight(userProfile?.height),
+        icon: TrendingUp,
+      },
+      {
+        label: "Vertical",
+        value: formatVertical(userProfile?.vertical),
+        icon: Zap,
+      },
+      {
+        label: "Weight",
+        value: formatWeight(userProfile?.weight),
+        icon: Trophy,
+      },
+      {
+        label: "Highlights",
+        value: highlights.length.toString(),
+        icon: Play,
+      },
+      {
+        label: "Points",
+        value: userProfile?.points !== undefined ? `${userProfile.points}` : "0",
+        icon: Star,
+        badge: "BETA",
+      },
+      {
+        label: "Block Touch",
+        value: formatTouch(userProfile?.blockTouch),
+        icon: ArrowUp,
+      },
+      {
+        label: "Standing Touch",
+        value: formatTouch(userProfile?.standingTouch),
+        icon: Users,
+      },
+      {
+        label: "Spike Touch",
+        value: formatTouch(userProfile?.spikeTouch),
+        icon: Zap,
+      },
+    ];
+  })();
+
+  // Mentor stats (Height, Weight, Vertical, Highlights, and touch metrics if available)
+  const mentorStats: { label: string; value: string; icon: any }[] = (() => {
+    if (!isMentorProfile) return [];
+
+    const stats = [
+      {
+        label: "Height",
+        value: formatHeight(userProfile?.height),
+        icon: TrendingUp,
+      },
+      {
+        label: "Weight",
+        value: formatWeight(userProfile?.weight),
+        icon: Trophy,
+      },
+      {
+        label: "Vertical",
+        value: formatVertical(userProfile?.vertical),
+        icon: Zap,
+      },
+      {
+        label: "Highlights",
+        value: highlights.length.toString(),
+        icon: Play,
+      },
+    ];
+
+    // Add touch metrics if available
+    if (userProfile?.blockTouch || userProfile?.standingTouch || userProfile?.spikeTouch) {
+      if (userProfile?.blockTouch) {
+        stats.push({
+          label: "Block Touch",
+          value: formatTouch(userProfile.blockTouch),
+          icon: ArrowUp,
+        });
+      }
+      if (userProfile?.standingTouch) {
+        stats.push({
+          label: "Standing Touch",
+          value: formatTouch(userProfile.standingTouch),
+          icon: Users,
+        });
+      }
+      if (userProfile?.spikeTouch) {
+        stats.push({
+          label: "Spike Touch",
+          value: formatTouch(userProfile.spikeTouch),
+          icon: Zap,
+        });
+      }
+    }
+
+    return stats;
+  })();
+
+  // Coach/Admin stats
   const stats: { label: string; value: string; icon: any; badge?: string }[] = (() => {
     if (isCoachProfile) {
       return [
-        {
-          label: "Highlights",
-          value: highlights.length.toString(),
-          icon: Play,
-        },
         {
           label: "Community Posts",
           value: posts.length.toString(),
@@ -572,58 +787,11 @@ export default function ProfilePage() {
       ].filter(Boolean) as { label: string; value: string; icon: any }[];
     }
 
-    const baseStats = [
-      {
-        label: "Height",
-        value: formatHeight(userProfile?.height),
-        icon: TrendingUp,
-      },
-      {
-        label: "Vertical",
-        value: formatVertical(userProfile?.vertical),
-        icon: Sparkles,
-      },
-      {
-        label: "Weight",
-        value: formatWeight(userProfile?.weight),
-        icon: Trophy,
-      },
-      {
-        label: "Highlights",
-        value: highlights.length.toString(),
-        icon: Play,
-      },
-      {
-        label: "Points",
-        value: userProfile?.points !== undefined ? `${userProfile.points}` : "0",
-        icon: Star,
-        badge: "BETA",
-      },
-    ];
-
-    baseStats.push(
-      {
-        label: "Block Touch",
-        value: formatTouch(userProfile?.blockTouch),
-        icon: ArrowUp,
-      },
-      {
-        label: "Standing Touch",
-        value: formatTouch(userProfile?.standingTouch),
-        icon: Users,
-      },
-      {
-        label: "Spike Touch",
-        value: formatTouch(userProfile?.spikeTouch),
-        icon: Zap,
-      },
-    );
-
-    return baseStats;
+    return [];
   })();
 
   const statsGridClass = isCoachProfile
-    ? "grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4"
+    ? "grid grid-cols-1 gap-3 mb-4"
     : isAdminProfile
       ? "grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4"
       : "grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4";
@@ -711,14 +879,22 @@ export default function ProfilePage() {
               </div>
               <div className="text-sm text-[#14532D]">
                 <p className="font-semibold">Profile Complete</p>
-                <p>You’re all set. Explore highlights, match with players, and connect across LockerLink.</p>
+                <p>
+                  {isCoachProfile
+                    ? "You’re all set. Explore highlights and connect with athletes across LockerLink."
+                    : isAdminProfile
+                    ? "You’re all set. Monitor athletes, posts, and conversations across LockerLink."
+                    : isMentorProfile
+                    ? "You’re all set. Discover athletes, share insights, and cheer on the community."
+                    : "You’re all set. Explore highlights, post updates, and connect across LockerLink."}
+                </p>
               </div>
             </div>
           </motion.div>
         )}
       </div>
 
-      {profileFieldsComplete && !hasHighlight && isAthleteProfile && !isComplete && (
+      {profileFieldsComplete && !hasHighlight && (isAthleteProfile || isMentorProfile) && !isComplete && (
         <div className="max-w-2xl mx-auto px-4 pt-4">
           <div className="flex flex-col gap-3 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-amber-100 px-5 py-4 shadow-sm">
             <div className="flex items-center gap-3">
@@ -755,7 +931,7 @@ export default function ProfilePage() {
         <div className="bg-white rounded-3xl p-6 sm:p-7 shadow-lg relative space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-start sm:gap-4">
             {/* Avatar */}
-            <div className="w-24 h-24 bg-gradient-to-br from-[#FACC15] to-[#F59E0B] rounded-2xl flex items-center justify-center -mt-12 shadow-xl overflow-hidden mx-auto sm:mx-0 sm:flex-shrink-0">
+            <div className="w-24 h-24 bg-gradient-to-br from-[#3B82F6] to-[#2563EB] rounded-2xl flex items-center justify-center -mt-12 shadow-xl overflow-hidden mx-auto sm:mx-0 sm:flex-shrink-0">
               {userProfile?.photoURL ? (
                 <Image
                   src={userProfile.photoURL}
@@ -773,63 +949,53 @@ export default function ProfilePage() {
             
             <div className="flex-1 pt-4 sm:pt-2 text-center sm:text-left">
               <div className="flex items-center gap-2 mb-1.5">
-                <h1 className="text-2xl sm:text-[26px] font-semibold text-[#0F172A] leading-tight">
+                <h1 className="text-2xl sm:text-[26px] font-bold text-[#0F172A] leading-tight">
                   {userProfile?.name || "Player"}
                 </h1>
-                <Award className="w-5 h-5 text-[#3B82F6]" />
               </div>
               {userProfile?.username && (
                 <p className="text-slate-500 text-sm mb-3">@{userProfile.username}</p>
               )}
-              {userProfile?.city && (
-                <div className="flex items-center gap-2 text-slate-600 mb-3">
-                  <MapPin className="w-4 h-4" />
-                  <span>{userProfile.city}</span>
-                </div>
-              )}
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap mb-3">
                 {userProfile?.position && (
-                  <div className="bg-[#3B82F6] text-white px-3 py-1 rounded-full text-sm font-medium mx-auto sm:mx-0">
+                  <div className="bg-[#3B82F6] text-white px-4 py-1.5 rounded-full text-sm font-medium">
                     {userProfile.position}
                   </div>
                 )}
                 {isAthleteProfile && userProfile?.secondaryPosition && (
-                  <div className="bg-blue-50 text-[#1D4ED8] px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide mx-auto sm:mx-0">
+                  <div className="bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide">
                     Secondary: {userProfile.secondaryPosition}
                   </div>
                 )}
                 {isAthleteProfile && userProfile?.ageGroup && (
-                  <div className="bg-blue-50 text-[#3B82F6] px-3 py-1 rounded-full text-sm font-medium border-0 mx-auto sm:mx-0">
+                  <div className="bg-blue-50 text-[#3B82F6] px-3 py-1 rounded-full text-sm font-medium">
                     {userProfile.ageGroup}
                   </div>
                 )}
-                {userProfile?.userType && (
-                  <div
-                    className={`px-3 py-1 rounded-full text-sm font-medium border ${
-                      isCoachProfile
-                        ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                        : isAdminProfile
-                        ? "bg-amber-50 text-amber-700 border-amber-200"
-                        : "bg-blue-50 text-blue-600 border-blue-100 hidden sm:inline-flex"
-                    }`}
-                  >
-                    {isCoachProfile
-                      ? "Coach"
-                      : isAdminProfile
-                      ? isClubAdminProfile
-                        ? "Club Admin"
-                        : "Parent / Guardian"
-                      : "Athlete"}
+                {isAthleteProfile && (
+                  <div className="bg-blue-50 text-[#3B82F6] px-3 py-1 rounded-full text-sm font-medium">
+                    Athlete
+                  </div>
+                )}
+                {isMentorProfile && (
+                  <div className="bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-sm font-medium">
+                    Mentor
+                  </div>
+                )}
+                {isCoachProfile && (
+                  <div className="bg-green-50 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
+                    Coach
+                  </div>
+                )}
+                {isAdminProfile && (
+                  <div className="bg-orange-50 text-orange-700 px-3 py-1 rounded-full text-sm font-medium">
+                    {userProfile?.adminRole === "clubAdmin" ? "Club Admin" : "Parent/Guardian"}
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Bio */}
-          {isAthleteProfile && userProfile?.bio && (
-            <p className="text-slate-700 leading-relaxed">{userProfile.bio}</p>
-          )}
 
           {isAdminProfile && userProfile?.bio && (
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
@@ -837,45 +1003,167 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* Profile details */}
+          {/* Profile details - Team, City, Age Group, Age for Athletes */}
           {isAthleteProfile && athleteInfoCards.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               {athleteInfoCards.map((card) => (
-                <div key={card.label} className="bg-slate-50 rounded-2xl p-4">
-                  <p className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-1">
+                <div key={card.label} className="bg-white rounded-2xl border border-slate-200 p-4">
+                  <p className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-1.5">
                     {card.label}
                   </p>
-                  <p className="text-[#0F172A] font-medium">{card.value}</p>
+                  <p className="text-[#0F172A] font-semibold text-base">{card.value.toLowerCase()}</p>
                 </div>
               ))}
             </div>
           )}
-          {isAdminProfile && adminInfoCards.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {adminInfoCards.map((card) => {
-                const Icon = card.icon;
+
+          {/* Profile details - Team, Region, Division, Age Group for Coaches */}
+          {isCoachProfile && coachInfoCards.length > 0 && (
+            <div className="grid grid-cols-2 gap-3">
+              {coachInfoCards.map((card) => (
+                <div key={card.label} className="bg-white rounded-2xl border border-slate-200 p-4">
+                  <p className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-1.5">
+                    {card.label}
+                  </p>
+                  <p className="text-[#0F172A] font-semibold text-base">{card.value}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Athletic Metrics Grid - for athletes only (8 cards) */}
+          {isAthleteProfile && athleteStats.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {athleteStats.map((stat, index) => {
+                const Icon = stat.icon;
                 return (
                   <div
-                    key={card.label}
-                    className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+                    key={stat.label}
+                    className="bg-white rounded-2xl border border-slate-200 p-4 flex flex-col items-center text-center"
                   >
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-                      <Icon className="h-5 w-5" />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        {card.label}
-                      </p>
-                      <p className="text-sm font-semibold text-[#0F172A] truncate">{card.value}</p>
+                    <div className="mb-2 flex items-center justify-center">
+                      <Icon className="w-5 h-5 text-[#3B82F6]" />
+                    </div>
+                    <p className="text-slate-500 text-xs font-medium mb-1.5">{stat.label}</p>
+                    <div className="flex flex-col items-center">
+                      <p className="text-[#0F172A] font-bold text-lg">{stat.value}</p>
+                      {stat.badge && (
+                        <span className="text-[10px] font-semibold text-[#F59E0B] mt-0.5">
+                          {stat.badge}
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
               })}
             </div>
           )}
-          {isCoachProfile && coachInfoCards.length > 0 && (
+
+          {/* Coach/Admin Stats - Single full-width card for coaches, multi-column for admins */}
+          {(isCoachProfile || isAdminProfile) && stats.length > 0 && (
+            <div className={statsGridClass}>
+              {stats.map((stat, index) => {
+                const Icon = stat.icon;
+                return (
+                  <div
+                    key={stat.label}
+                    className={`bg-white rounded-2xl border border-slate-200 p-4 flex flex-col items-center text-center ${
+                      isCoachProfile ? "w-full" : ""
+                    }`}
+                  >
+                    <div className="mb-2 flex items-center justify-center">
+                      <Icon className="w-5 h-5 text-[#3B82F6]" />
+                    </div>
+                    <p className="text-slate-500 text-xs font-medium mb-1.5">{stat.label}</p>
+                    <div className="flex flex-col items-center">
+                      <p className="text-[#0F172A] font-bold text-lg">{stat.value}</p>
+                      {stat.badge && (
+                        <span className="text-[10px] font-semibold text-[#F59E0B] mt-0.5">
+                          {stat.badge}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {/* Mentor Performance Stats - Height, Weight, Vertical, Highlights */}
+          {isMentorProfile && mentorStats.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-[#6B7280] uppercase tracking-wide mb-3">Performance Stats</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                {mentorStats.map((stat, index) => {
+                  const Icon = stat.icon;
+                  return (
+                    <div
+                      key={stat.label}
+                      className="bg-white rounded-2xl border border-slate-200 p-4 flex flex-col items-center text-center"
+                    >
+                      <div className="mb-2 flex items-center justify-center">
+                        <Icon className="w-5 h-5 text-[#3B82F6]" />
+                      </div>
+                      <p className="text-slate-500 text-xs font-medium mb-1.5">{stat.label}</p>
+                      <p className="text-[#0F172A] font-bold text-lg">{stat.value}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Mentorship Info Section - ONLY for mentors */}
+          {isMentorProfile && (
+            <div>
+              <h3 className="text-sm font-semibold text-[#6B7280] uppercase tracking-wide mb-3">Mentorship Info</h3>
+              <div className="space-y-3">
+                {(userProfile?.university || userProfile?.experienceYears) && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {userProfile?.university && (
+                      <div className="bg-white rounded-2xl border border-slate-200 p-4">
+                        <p className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-1.5">
+                          University
+                        </p>
+                        <p className="text-[#0F172A] font-medium">{userProfile.university}</p>
+                      </div>
+                    )}
+                    {userProfile?.experienceYears && (
+                      <div className="bg-white rounded-2xl border border-slate-200 p-4">
+                        <p className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-1.5">
+                          Years of Experience
+                        </p>
+                        <p className="text-[#0F172A] font-medium">{userProfile.experienceYears} years</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {userProfile?.focusAreas && (
+                  <div className="bg-indigo-50 rounded-2xl border border-indigo-200 p-4">
+                    <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-2">
+                      Focus Areas
+                    </p>
+                    <p className="text-sm text-indigo-900 whitespace-pre-line">{userProfile.focusAreas}</p>
+                  </div>
+                )}
+                {userProfile?.contactLink && (
+                  <div className="bg-white rounded-2xl border border-slate-200 p-4">
+                    <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-2">Preferred Contact</p>
+                    <a
+                      href={userProfile.contactLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-medium text-[#2563EB] underline break-all hover:text-[#1D4ED8] transition-colors"
+                    >
+                      {userProfile.contactLink}
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          {isAdminProfile && adminInfoCards.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {coachInfoCards.map((card) => {
+              {adminInfoCards.map((card) => {
                 const Icon = card.icon;
                 return (
                   <div
@@ -896,98 +1184,134 @@ export default function ProfilePage() {
               })}
             </div>
           )}
-          {isCoachProfile && userProfile?.coachMessage && (
-            <div className="rounded-3xl border border-[#DBEAFE] bg-gradient-to-br from-[#EFF6FF] via-white to-white p-5 shadow-sm">
-              <div className="mb-3 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#2563EB]/15 text-[#2563EB] text-base font-semibold">
-                  ✉️
+          {/* Mentor Bio & Achievements Section - ONLY for mentors */}
+          {isMentorProfile && (
+            <div className="space-y-3">
+              {userProfile?.volleyballBackground && (
+                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                  <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-2">
+                    Volleyball Background
+                  </p>
+                  <p className="text-sm text-[#111827] leading-relaxed whitespace-pre-line">
+                    {userProfile.volleyballBackground}
+                  </p>
                 </div>
-                <p className="text-sm font-semibold uppercase tracking-wide text-[#2563EB]">
-                  Message to Athletes
-                </p>
-              </div>
-              <p className="text-sm leading-relaxed text-[#1E3A8A]">{userProfile.coachMessage}</p>
+              )}
+              {userProfile?.bio && (
+                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                  <p className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide mb-2">Bio</p>
+                  <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{userProfile.bio}</p>
+                </div>
+              )}
+              {userProfile?.achievements && (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+                  <p className="text-xs font-semibold text-[#92400E] uppercase tracking-wide mb-2">Achievements</p>
+                  <p className="text-sm text-[#B45309] whitespace-pre-line">{userProfile.achievements}</p>
+                </div>
+              )}
             </div>
           )}
-
-          {/* Stats */}
-          {stats.length > 0 && (
-            <div className={`${statsGridClass} mt-2`}>
-              {stats.map((stat) => {
-                const Icon = stat.icon;
-                return (
-                  <div key={stat.label} className="bg-slate-50 rounded-2xl p-4 text-center shadow-sm">
-                    <Icon className="w-5 h-5 text-[#3B82F6] mx-auto mb-2" />
-                    <p className="text-xs text-slate-500 mb-1">{stat.label}</p>
-                    <p className="text-[#0F172A] font-medium">{stat.value}</p>
-                    {stat.badge && (
-                      <span className="mt-1 inline-flex items-center justify-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
-                        {stat.badge}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
+          {/* OG LockerLink User Badge */}
           {isAthleteProfile && userProfile?.ogLockerLinkUser && (
-            <div className="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-amber-100 px-4 py-3 shadow-sm flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-400 text-white font-semibold">
+            <div className="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-amber-100 px-5 py-4 flex items-center gap-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-500 text-white font-bold text-sm flex-shrink-0">
                 OG
               </div>
-              <div className="text-sm text-[#92400E]">
-                <p className="font-semibold">OG LockerLink User</p>
-                <p className="text-xs">Thanks for being part of the first wave of the LockerLink community.</p>
+              <div className="text-sm">
+                <p className="font-bold text-[#92400E]">OG LockerLink User</p>
+                <p className="text-xs text-[#B45309] mt-0.5">Thanks for being part of the first wave of the LockerLink community.</p>
               </div>
             </div>
           )}
 
           {/* Action buttons */}
-          <div className="pt-3 flex flex-col gap-3 sm:flex-row sm:justify-end sm:text-right">
+          <div className="pt-4 flex flex-col gap-3 sm:flex-row">
             <motion.button
               onClick={() => setShowEditForm(true)}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="flex-1 sm:flex-none sm:w-auto items-center justify-center gap-2 rounded-xl bg-[#007AFF] px-4 sm:px-6 py-2.5 sm:py-3 text-white font-medium transition-all duration-200 hover:bg-[#0056CC] shadow-md hover:shadow-lg touch-manipulation min-h-[44px] text-sm sm:text-base"
+              className="flex-1 sm:flex-none items-center justify-center gap-2 rounded-xl bg-[#3B82F6] px-6 py-3 text-white font-medium transition-all duration-200 hover:bg-[#2563EB] shadow-sm hover:shadow-md touch-manipulation min-h-[44px]"
             >
               Edit Profile
             </motion.button>
-            <Link
-              href={
-                isCoachProfile
-                  ? "/coach"
-                  : isAdminProfile
-                  ? "/coach"
-                  : "/match"
-              }
-              className="contents"
-            >
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="flex-1 sm:flex-none sm:w-auto items-center justify-center gap-2 rounded-xl border border-[#3B82F6] bg-white px-4 sm:px-6 py-2.5 sm:py-3 text-[#3B82F6] font-medium transition-all duration-200 hover:bg-blue-50 shadow-sm hover:shadow-md touch-manipulation min-h-[44px] text-sm sm:text-base"
-              >
-                {isCoachProfile
-                  ? "Open Coach Dashboard"
-                  : isAdminProfile
-                  ? "Open Admin Dashboard"
-                  : "Find Match"}
-              </motion.button>
-            </Link>
+            {isAthleteProfile && (
+              <Link href="/match" className="contents">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex-1 sm:flex-none items-center justify-center gap-2 rounded-xl border-2 border-[#3B82F6] bg-white px-6 py-3 text-[#3B82F6] font-medium transition-all duration-200 hover:bg-blue-50 touch-manipulation min-h-[44px]"
+                >
+                  Find Match
+                </motion.button>
+              </Link>
+            )}
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setShowManagePosts(true)}
-              className="flex-1 sm:flex-none sm:w-auto items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 sm:px-6 py-2.5 sm:py-3 text-slate-600 font-medium transition-all duration-200 hover:bg-slate-50 shadow-sm hover:shadow-md touch-manipulation min-h-[44px] text-sm sm:text-base"
+              className="flex-1 sm:flex-none items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3 text-slate-600 font-medium transition-all duration-200 hover:bg-slate-50 touch-manipulation min-h-[44px]"
             >
               Manage Posts
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowSwitchUserTypeModal(true)}
+              className="flex-1 sm:flex-none items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-6 py-3 text-red-600 font-medium transition-all duration-200 hover:bg-red-100 touch-manipulation min-h-[44px]"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Switch User Type
             </motion.button>
           </div>
         </div>
       </div>
 
-      {isAthleteProfile && (
+      {/* Switch User Type Confirmation Modal */}
+      {showSwitchUserTypeModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-xl"
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+              </div>
+              <h2 className="text-2xl font-semibold text-[#111827]">Switch User Type?</h2>
+            </div>
+            <p className="text-slate-600 mb-2">
+              This will <strong className="text-red-600">permanently delete</strong> all your profile information, including:
+            </p>
+            <ul className="list-disc list-inside text-slate-600 mb-6 space-y-1 text-sm">
+              <li>All profile data (team, position, metrics, bio, etc.)</li>
+              <li>All highlight videos</li>
+              <li>Your current user type settings</li>
+            </ul>
+            <p className="text-slate-700 font-medium mb-6">
+              You will be redirected to choose a new user type and create a new profile from scratch.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowSwitchUserTypeModal(false)}
+                disabled={switchingUserType}
+                className="flex-1 px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-700 font-medium transition-all hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSwitchUserType}
+                disabled={switchingUserType}
+                className="flex-1 px-4 py-3 rounded-xl bg-red-600 text-white font-medium transition-all hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {switchingUserType ? "Switching..." : "Yes, Switch User Type"}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {(isAthleteProfile || isMentorProfile) && (
         <div className="max-w-2xl mx-auto px-4">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-[#0F172A] font-semibold">My Highlights</h2>
@@ -1064,28 +1388,29 @@ export default function ProfilePage() {
               })}
             </div>
           ) : (
-            <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center">
-              <Play className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-600 mb-2">No highlights yet</p>
-              <motion.button
-                onClick={() => {
-                  setSubmitHighlightToChallenge(false);
-                  setShowUploadModal(true);
-                }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="rounded-xl bg-[#007AFF] px-6 py-3 text-white font-medium shadow-sm hover:shadow-md transition-all inline-flex items-center gap-2"
-              >
-                <Upload className="w-5 h-5" />
-                Upload Your First Highlight
-              </motion.button>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-12 text-center text-slate-500">
+              <p className="text-sm">No highlights yet. Click "Upload" to add your first highlight!</p>
             </div>
           )}
         </div>
       )}
 
+      {/* Coach/Admin Highlights Section */}
+      {(isCoachProfile || isAdminProfile) && (
+        <div className="max-w-2xl mx-auto px-4">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-[#0F172A] font-semibold">My Highlights</h2>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-12 text-center text-slate-500">
+            <p className="text-sm">
+              Coaches and admins don't upload highlights, but you can post training updates or share links instead.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Upload Modal */}
-      {showUploadModal && isAthleteProfile && (
+      {showUploadModal && (isAthleteProfile || isMentorProfile) && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}

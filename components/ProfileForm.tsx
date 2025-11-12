@@ -28,11 +28,17 @@ interface UserProfile {
   spikeTouch?: string;
   points?: number;
   photoURL?: string;
-  userType: "athlete" | "coach" | "admin";
+  userType: "athlete" | "coach" | "admin" | "mentor";
   division?: string;
   coachMessage?: string;
   ogLockerLinkUser?: boolean;
   adminRole?: "parent" | "clubAdmin" | "";
+  university?: string;
+  experienceYears?: string;
+  focusAreas?: string;
+  contactLink?: string;
+  achievements?: string;
+  volleyballBackground?: string;
 }
 
 interface ProfileFormProps {
@@ -72,7 +78,7 @@ const MONTH_OPTIONS = [
 ];
 
 const currentYear = new Date().getFullYear();
-const YEAR_OPTIONS = Array.from({ length: currentYear - 2000 + 1 }, (_, index) => `${currentYear - index}`);
+const YEAR_OPTIONS = Array.from({ length: currentYear - 1990 + 1 }, (_, index) => `${currentYear - index}`);
 const AGE_GROUP_OPTIONS = ["15U", "16U", "17U", "18U"];
 const POSITION_OPTIONS = [
   "Outside Hitter (Left Side)",
@@ -122,6 +128,12 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
     coachMessage: "",
     ogLockerLinkUser: false,
     adminRole: "",
+    university: "",
+    experienceYears: "",
+    focusAreas: "",
+    contactLink: "",
+    achievements: "",
+    volleyballBackground: "",
   });
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -136,6 +148,11 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
   const [spikeTouch, setSpikeTouch] = useState<string>("");
   const isCoach = formData.userType === "coach";
   const isAdmin = formData.userType === "admin";
+  const isMentor = formData.userType === "mentor";
+  const isAthleteOrMentor = formData.userType === "athlete" || formData.userType === "mentor";
+  const isAthleteOnly = formData.userType === "athlete";
+  const needsBirthInfo = formData.userType === "athlete" || formData.userType === "mentor";
+  const needsMetrics = formData.userType === "athlete" || formData.userType === "mentor";
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -152,32 +169,48 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
           const standingValue = parseNumericValue(data.standingTouch);
           const spikeValue = parseNumericValue(data.spikeTouch);
           const derivedAgeGroup = data.ageGroup || convertAgeToGroup(data.age);
-        setFormData({
-            username: data.username || "",
-            name: data.name || "",
-            team: data.team || "",
-            ageGroup: derivedAgeGroup || "",
-            birthMonth: data.birthMonth || "",
-            birthYear: data.birthYear || "",
-            city: data.city || "",
-            position: data.position || "",
-            secondaryPosition: data.secondaryPosition || "",
-            sport: data.sport || "Volleyball",
-            bio: data.bio || "",
-            height: data.height || "",
-            vertical: data.vertical || "",
-            weight: data.weight || "",
-            blockTouch: data.blockTouch || "",
-            standingTouch: data.standingTouch || "",
-            spikeTouch: data.spikeTouch || "",
-            points: typeof data.points === "number" ? data.points : 0,
-            photoURL: data.photoURL || "",
-          userType: (data.userType as "athlete" | "coach" | "admin") || "athlete",
-            division: data.division || "",
-          coachMessage: data.coachMessage || "",
-          ogLockerLinkUser: data.ogLockerLinkUser ?? true,
-          adminRole: data.adminRole || "",
-          });
+          const resolvedAdminRole = data.userType === "admin" ? (data.adminRole || "parent") : "";
+
+          if (data.userType === "admin" && !data.adminRole) {
+            try {
+              await setDoc(doc(db, "users", user.uid), { adminRole: "parent" }, { merge: true });
+            } catch (error) {
+              console.error("Error setting default admin role:", error);
+            }
+          }
+
+          setFormData({
+              username: data.username || "",
+              name: data.name || "",
+              team: data.team || "",
+              ageGroup: derivedAgeGroup || "",
+              birthMonth: data.birthMonth || "",
+              birthYear: data.birthYear || "",
+              city: data.city || "",
+              position: data.position || "",
+              secondaryPosition: data.secondaryPosition || "",
+              sport: data.sport || "Volleyball",
+              bio: data.bio || "",
+              height: data.height || "",
+              vertical: data.vertical || "",
+              weight: data.weight || "",
+              blockTouch: data.blockTouch || "",
+              standingTouch: data.standingTouch || "",
+              spikeTouch: data.spikeTouch || "",
+              points: typeof data.points === "number" ? data.points : 0,
+              photoURL: data.photoURL || "",
+              userType: (data.userType as "athlete" | "coach" | "admin" | "mentor") || "athlete",
+              division: data.division || "",
+              coachMessage: data.coachMessage || "",
+              ogLockerLinkUser: data.ogLockerLinkUser ?? true,
+              adminRole: resolvedAdminRole,
+              university: data.university || "",
+              experienceYears: data.experienceYears || "",
+              focusAreas: data.focusAreas || "",
+              contactLink: data.contactLink || "",
+              achievements: data.achievements || "",
+              volleyballBackground: data.volleyballBackground || "",
+            });
           setHeightFeet(heightParts.feet);
           setHeightInches(heightParts.inches);
           setVerticalInches(verticalValue);
@@ -209,6 +242,12 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
             points: 0,
             ogLockerLinkUser: prev.ogLockerLinkUser ?? true,
             adminRole: "",
+            university: "",
+            experienceYears: "",
+            focusAreas: "",
+            contactLink: "",
+            achievements: "",
+            volleyballBackground: "",
           }));
         }
       } catch (error) {
@@ -291,15 +330,26 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
 
       const isCoachSubmit = formData.userType === "coach";
       const isAdminSubmit = formData.userType === "admin";
+      const isMentorSubmit = formData.userType === "mentor";
 
-      if (!isCoachSubmit && !isAdminSubmit) {
-        if (!formData.ageGroup) {
-          alert("Please select your age group (17U or 18U).");
+      if (isAthleteOnly) {
+        if (!formData.birthMonth || !formData.birthYear) {
+          alert("Please provide your birth month and year.");
           setSaving(false);
           return;
         }
-        if (!formData.birthMonth || !formData.birthYear) {
-          alert("Please provide your birth month and year.");
+        if (!formData.team?.trim()) {
+          alert("Please enter your team or club name.");
+          setSaving(false);
+          return;
+        }
+        if (!formData.city?.trim()) {
+          alert("Please enter the city where you live.");
+          setSaving(false);
+          return;
+        }
+        if (!formData.ageGroup) {
+          alert("Please select your age group.");
           setSaving(false);
           return;
         }
@@ -352,15 +402,23 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         isCoachSubmit || isAdminSubmit || !spikeValue ? "" : `${spikeValue}"`;
       const normalizedTeam = isCoachSubmit
         ? trimmedTeam
+        : isAdminSubmit
+          ? formData.adminRole === "clubAdmin"
+            ? trimmedTeam
+            : ""
+          : trimmedTeam;
+      const normalizedCity = isCoachSubmit
+        ? trimmedCity
         : isAdminSubmit && formData.adminRole === "clubAdmin"
-          ? trimmedTeam
-          : "";
-      const normalizedCity = isCoachSubmit ? trimmedCity : isAdminSubmit && formData.adminRole === "clubAdmin" ? trimmedCity : "";
+          ? trimmedCity
+          : trimmedCity;
       const normalizedPosition = isCoachSubmit || isAdminSubmit ? "" : formData.position;
       const normalizedSecondaryPosition =
         isCoachSubmit || isAdminSubmit ? "" : formData.secondaryPosition || "";
       const normalizedCoachMessage = isCoachSubmit ? formData.coachMessage?.trim() || "" : "";
-
+      const normalizedBirthMonth = isCoachSubmit || isAdminSubmit ? "" : formData.birthMonth;
+      const normalizedBirthYear = isCoachSubmit || isAdminSubmit ? "" : formData.birthYear;
+ 
       // Save profile using setDoc with merge: true (creates or updates)
       // Store username in lowercase for case-insensitive searches
       await setDoc(
@@ -378,17 +436,23 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
           vertical: normalizedVertical,
           weight: normalizedWeight,
           userType: formData.userType,
-          ageGroup: isCoachSubmit || isAdminSubmit ? "" : formData.ageGroup,
-          birthMonth: isCoachSubmit || isAdminSubmit ? "" : formData.birthMonth,
-          birthYear: isCoachSubmit || isAdminSubmit ? "" : formData.birthYear,
+          ageGroup: isAthleteOnly ? formData.ageGroup : "",
+          birthMonth: normalizedBirthMonth,
+          birthYear: normalizedBirthYear,
           blockTouch: normalizedBlockTouch,
           standingTouch: normalizedStandingTouch,
           spikeTouch: normalizedSpikeTouch,
           division: isCoachSubmit ? formData.division || "" : "",
           coachMessage: normalizedCoachMessage,
           ogLockerLinkUser: formData.ogLockerLinkUser ?? true,
-          points: isCoachSubmit || isAdminSubmit ? 0 : pointsValue,
+          points: isCoachSubmit || isAdminSubmit || isMentorSubmit ? 0 : pointsValue,
           adminRole: isAdminSubmit ? formData.adminRole : "",
+          university: formData.university?.trim() || "",
+          experienceYears: formData.experienceYears?.trim() || "",
+          focusAreas: formData.focusAreas?.trim() || "",
+          contactLink: formData.contactLink?.trim() || "",
+          achievements: formData.achievements?.trim() || "",
+          volleyballBackground: formData.volleyballBackground?.trim() || "",
         },
         { merge: true }
       );
@@ -406,15 +470,20 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         division: isCoachSubmit ? formData.division || "" : "",
         coachMessage: normalizedCoachMessage,
         ogLockerLinkUser: formData.ogLockerLinkUser ?? true,
-        points: isCoachSubmit || isAdminSubmit ? 0 : pointsValue,
+        points: isCoachSubmit || isAdminSubmit || isMentorSubmit ? 0 : pointsValue,
         team: normalizedTeam,
         city: normalizedCity,
         position: normalizedPosition,
         secondaryPosition: normalizedSecondaryPosition,
-        ageGroup: isCoachSubmit || isAdminSubmit ? "" : formData.ageGroup,
-        birthMonth: isCoachSubmit || isAdminSubmit ? "" : formData.birthMonth,
-        birthYear: isCoachSubmit || isAdminSubmit ? "" : formData.birthYear,
+        birthMonth: normalizedBirthMonth,
+        birthYear: normalizedBirthYear,
         adminRole: isAdminSubmit ? formData.adminRole : "",
+        university: formData.university?.trim() || "",
+        experienceYears: formData.experienceYears?.trim() || "",
+        focusAreas: formData.focusAreas?.trim() || "",
+        contactLink: formData.contactLink?.trim() || "",
+        achievements: formData.achievements?.trim() || "",
+        volleyballBackground: formData.volleyballBackground?.trim() || "",
       });
       setHeightFeet(isCoachSubmit || isAdminSubmit ? "" : heightFeet);
       setHeightInches(isCoachSubmit || isAdminSubmit ? "" : heightInches);
@@ -461,12 +530,12 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
       onSubmit={handleSubmit}
-      className="space-y-6"
+      className="space-y-5"
     >
       {/* Profile Photo Section */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-start gap-6">
         <div className="flex-shrink-0">
-          <label className="mb-3 block text-sm font-medium text-[#111827]">Profile Photo</label>
+          <label className="mb-2 block text-xs font-medium text-[#111827]">Profile Photo</label>
           <div className="relative group">
             <motion.div
               whileHover={{ scale: 1.02 }}
@@ -494,13 +563,24 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
               />
             </label>
           </div>
-          <p className="mt-3 text-xs text-[#6B7280]">Click camera icon to upload</p>
+          <p className="mt-2 text-xs text-[#6B7280]">Click camera icon to upload</p>
+          
+          {/* Account Type (for athletes) - Under profile photo */}
+          {isAthleteOnly && (
+            <div className="mt-4">
+              <label className="mb-1.5 block text-xs font-medium text-[#111827]">Account Type *</label>
+              <div className="flex items-center rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-xs font-semibold text-[#1D4ED8] h-[42px] justify-center">
+                Athlete
+              </div>
+            </div>
+          )}
         </div>
         
-        <div className="flex-1 w-full">
+        <div className="flex-1 w-full space-y-4">
+          {/* Username and Name */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="mb-2 block text-sm font-medium text-[#111827]">Username *</label>
+              <label className="mb-1.5 block text-xs font-medium text-[#111827]">Username *</label>
               <div className="relative">
                 <input
                   type="text"
@@ -519,7 +599,7 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
                   maxLength={20}
                   className={`w-full rounded-xl border ${
                     usernameError ? "border-[#FF3B30]" : "border-[#E5E7EB]"
-                  } bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation`}
+                  } bg-white px-4 py-2.5 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation`}
                   placeholder="username"
                   inputMode="text"
                   autoComplete="username"
@@ -539,29 +619,67 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
               <p className="mt-1 text-xs text-[#6B7280]">This is how others will find you (3-20 characters)</p>
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-[#111827]">Name *</label>
+              <label className="mb-1.5 block text-xs font-medium text-[#111827]">Name *</label>
               <input
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
-                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
                 placeholder="Your name"
                 inputMode="text"
                 autoComplete="name"
               />
             </div>
           </div>
-          {!isCoach && !isAdmin && (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+
+          {/* Birth Month, Year, Age Group (for athletes) */}
+          {isAthleteOrMentor && (
+            <div className={`grid grid-cols-1 ${isAthleteOnly ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-4`}>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-[#111827]">
+                  Birth Month {needsBirthInfo ? "*" : "(optional)"}
+                </label>
+                <select
+                  value={formData.birthMonth}
+                  onChange={(e) => setFormData({ ...formData, birthMonth: e.target.value })}
+                  required={needsBirthInfo}
+                  className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+                >
+                  <option value="">Select month</option>
+                  {MONTH_OPTIONS.map((month) => (
+                    <option key={month} value={month}>
+                      {month}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-[#111827]">
+                  Birth Year {needsBirthInfo ? "*" : "(optional)"}
+                </label>
+                <select
+                  value={formData.birthYear}
+                  onChange={(e) => setFormData({ ...formData, birthYear: e.target.value })}
+                  required={needsBirthInfo}
+                  className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+                >
+                  <option value="">Select year</option>
+                  {YEAR_OPTIONS.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {isAthleteOnly && (
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-[#111827]">Age Group *</label>
+                  <label className="mb-1.5 block text-xs font-medium text-[#111827]">Age Group *</label>
                   <select
                     value={formData.ageGroup}
                     onChange={(e) => setFormData({ ...formData, ageGroup: e.target.value })}
-                    required={!isCoach && !isAdmin}
-                    className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+                    required
+                    className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
                   >
                     <option value="">Select age group</option>
                     {AGE_GROUP_OPTIONS.map((option) => (
@@ -571,97 +689,150 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
                     ))}
                   </select>
                 </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-[#111827]">Birth Month *</label>
-                  <select
-                    value={formData.birthMonth}
-                    onChange={(e) => setFormData({ ...formData, birthMonth: e.target.value })}
-                    required={!isCoach && !isAdmin}
-                    className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
-                  >
-                    <option value="">Select month</option>
-                    {MONTH_OPTIONS.map((month) => (
-                      <option key={month} value={month}>
-                        {month}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-[#111827]">Birth Year *</label>
-                  <select
-                    value={formData.birthYear}
-                    onChange={(e) => setFormData({ ...formData, birthYear: e.target.value })}
-                    required={!isCoach && !isAdmin}
-                    className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
-                  >
-                    <option value="">Select year</option>
-                    {YEAR_OPTIONS.map((year) => (
-                      <option key={year} value={year}>
-                        {year}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+              )}
+            </div>
+          )}
 
-              <div className="mt-4">
-                <label className="mb-2 block text-sm font-medium text-[#111827]">Height *</label>
-                <div className="flex gap-3">
-                  <div className="flex-1">
-                    <div className="relative">
-                      <input
-                        type="number"
-                        min={4}
-                        max={7}
-                        value={heightFeet}
-                        onChange={(e) => setHeightFeet(e.target.value)}
-                        required={!isAdmin}
-                        placeholder="Feet"
-                        className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 pr-12 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
-                      />
-                      <span className="absolute inset-y-0 right-4 flex items-center text-sm text-[#6B7280]">ft</span>
-                    </div>
+          {/* Height Feet and Inches (for athletes) - Expanded to fill space */}
+          {isAthleteOnly && (
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-[#111827]">Height *</label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="relative">
+                  <input
+                    type="number"
+                    min={4}
+                    max={7}
+                    value={heightFeet}
+                    onChange={(e) => setHeightFeet(e.target.value)}
+                    required={needsMetrics}
+                    placeholder="Feet"
+                    className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 pr-12 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+                  />
+                  <span className="absolute inset-y-0 right-4 flex items-center text-xs text-[#6B7280]">ft</span>
+                </div>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min={0}
+                    max={11}
+                    value={heightInches}
+                    onChange={(e) => setHeightInches(e.target.value)}
+                    required={needsMetrics}
+                    placeholder="Inches"
+                    className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 pr-12 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+                  />
+                  <span className="absolute inset-y-0 right-4 flex items-center text-xs text-[#6B7280]">in</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Height (for mentors only) */}
+          {isMentor && !isAthleteOnly && (
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-[#111827]">Height *</label>
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min={4}
+                      max={7}
+                      value={heightFeet}
+                      onChange={(e) => setHeightFeet(e.target.value)}
+                      required={needsMetrics}
+                      placeholder="Feet"
+                      className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 pr-12 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+                    />
+                    <span className="absolute inset-y-0 right-4 flex items-center text-xs text-[#6B7280]">ft</span>
                   </div>
-                  <div className="flex-1">
-                    <div className="relative">
-                      <input
-                        type="number"
-                        min={0}
-                        max={11}
-                        value={heightInches}
-                        onChange={(e) => setHeightInches(e.target.value)}
-                        required={!isAdmin}
-                        placeholder="Inches"
-                        className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 pr-12 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
-                      />
-                      <span className="absolute inset-y-0 right-4 flex items-center text-sm text-[#6B7280]">in</span>
-                    </div>
+                </div>
+                <div className="flex-1">
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min={0}
+                      max={11}
+                      value={heightInches}
+                      onChange={(e) => setHeightInches(e.target.value)}
+                      required={needsMetrics}
+                      placeholder="Inches"
+                      className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 pr-12 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+                    />
+                    <span className="absolute inset-y-0 right-4 flex items-center text-xs text-[#6B7280]">in</span>
                   </div>
                 </div>
               </div>
-            </>
+            </div>
           )}
         </div>
       </div>
-      <div>
-        <label className="mb-2 block text-sm font-medium text-[#111827]">Account Type</label>
-        <div
-          className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold ${
-            isCoach
-              ? "border-emerald-200 bg-emerald-50 text-emerald-600"
-              : isAdmin
-              ? "border-amber-200 bg-amber-50 text-amber-700"
-              : "border-blue-200 bg-blue-50 text-[#1D4ED8]"
-          }`}
-        >
-          {isCoach ? "Coach" : isAdmin ? (formData.adminRole === "clubAdmin" ? "Club Admin" : "Parent") : "Athlete"}
-        </div>
-      </div>
 
+      {/* Team and City (for athletes) */}
+      {isAthleteOnly && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-[#111827]">Team *</label>
+            <input
+              type="text"
+              value={formData.team}
+              onChange={(e) => setFormData({ ...formData, team: e.target.value })}
+              required
+              placeholder="e.g., Milton Acers"
+              className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-[#111827]">City *</label>
+            <input
+              type="text"
+              value={formData.city}
+              onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+              required
+              placeholder="e.g., Milton"
+              className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+            />
+          </div>
+        </div>
+      )}
+
+      {isAthleteOnly && (
+        <p className="text-xs text-[#6B7280] -mt-1">Use the city where you live (e.g., Milton). Keep your team or club name in the Team field.</p>
+      )}
+
+      {/* Account Type for non-athletes */}
+      {!isAthleteOnly && (
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-[#111827]">Account Type</label>
+          <div
+            className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-xs font-semibold ${
+              isCoach
+                ? "border-emerald-200 bg-emerald-50 text-emerald-600"
+                : isAdmin
+                ? "border-amber-200 bg-amber-50 text-amber-700"
+              : isMentor
+                ? "border-indigo-200 bg-indigo-50 text-indigo-600"
+                : "border-blue-200 bg-blue-50 text-[#1D4ED8]"
+            }`}
+          >
+            {isCoach
+              ? "Coach"
+              : isAdmin
+              ? formData.adminRole === "clubAdmin"
+                ? "Club Admin"
+                : "Parent"
+              : isMentor
+                ? "Mentor"
+                : "Athlete"}
+          </div>
+        </div>
+      )}
+
+      {/* Admin Type Selection */}
       {isAdmin && (
         <div>
-          <label className="mb-2 block text-sm font-medium text-[#111827]">Admin Type *</label>
+          <label className="mb-1.5 block text-xs font-medium text-[#111827]">Admin Type *</label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
               { value: "parent", label: "Parent / Guardian" },
@@ -677,7 +848,7 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
                     team: option.value === "clubAdmin" ? prev.team : "",
                   }))
                 }
-                className={`rounded-xl border px-4 py-2 text-sm font-medium transition-all ${
+                className={`rounded-xl border px-4 py-2 text-xs font-medium transition-all ${
                   formData.adminRole === option.value
                     ? "border-[#007AFF] bg-[#E0F2FF] text-[#0F172A]"
                     : "border-[#E5E7EB] bg-white text-[#111827] hover:border-[#007AFF]/60"
@@ -700,81 +871,137 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         </div>
       )}
 
+      {/* Coach Fields */}
       {isCoach && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="mb-2 block text-sm font-medium text-[#111827]">Team / Club *</label>
+            <label className="mb-1.5 block text-xs font-medium text-[#111827]">Team / Club *</label>
             <input
               type="text"
               value={formData.team}
               onChange={(e) => setFormData({ ...formData, team: e.target.value })}
               required
               placeholder="e.g., Milton Edge 17U"
-              className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+              className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
             />
           </div>
-
           <div>
-            <label className="mb-2 block text-sm font-medium text-[#111827]">Region *</label>
+            <label className="mb-1.5 block text-xs font-medium text-[#111827]">Region *</label>
             <input
               type="text"
               value={formData.city}
               onChange={(e) => setFormData({ ...formData, city: e.target.value })}
               required
               placeholder="e.g., Peel Region"
-              className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+              className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
             />
             <p className="mt-1 text-xs text-[#6B7280]">List the region you recruit from (e.g., GTA, Peel Region).</p>
           </div>
         </div>
       )}
 
+      {isCoach && (
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-[#111827]">Division</label>
+          <input
+            type="text"
+            value={formData.division}
+            onChange={(e) => setFormData({ ...formData, division: e.target.value })}
+            placeholder="e.g., 17U Boys"
+            className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+          />
+        </div>
+      )}
+
+      {/* Admin Club Admin Team */}
       {isAdmin && formData.adminRole === "clubAdmin" && (
         <div>
-          <label className="mb-2 block text-sm font-medium text-[#111827]">Team *</label>
+          <label className="mb-1.5 block text-xs font-medium text-[#111827]">Team *</label>
           <input
             type="text"
             value={formData.team}
             onChange={(e) => setFormData({ ...formData, team: e.target.value })}
             required
             placeholder="e.g., Milton Edge 17U"
-            className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+            className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
           />
           <p className="mt-1 text-xs text-[#6B7280]">Let athletes and coaches know which club you manage.</p>
         </div>
       )}
 
-      {isCoach && (
+      {/* Mentor Fields */}
+      {isMentor && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-[#111827]">University / College (optional)</label>
+            <input
+              type="text"
+              value={formData.university || ""}
+              onChange={(e) => setFormData({ ...formData, university: e.target.value })}
+              placeholder="e.g., University of Toronto"
+              className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-[#111827]">Years of Experience (optional)</label>
+            <input
+              type="number"
+              min={0}
+              max={30}
+              value={formData.experienceYears || ""}
+              onChange={(e) => setFormData({ ...formData, experienceYears: e.target.value })}
+              placeholder="e.g., 4"
+              className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+            />
+          </div>
+        </div>
+      )}
+
+      {isMentor && (
         <div>
-          <label className="mb-2 block text-sm font-medium text-[#111827]">Division</label>
+          <label className="mb-1.5 block text-xs font-medium text-[#111827]">Focus Areas *</label>
+          <textarea
+            value={formData.focusAreas || ""}
+            onChange={(e) => setFormData({ ...formData, focusAreas: e.target.value.slice(0, 400) })}
+            required={isMentor}
+            rows={3}
+            placeholder="e.g., Outside hitters, serve receive fundamentals, balancing school and athletics"
+            className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 resize-none"
+          />
+          <p className="mt-1.5 text-xs text-[#6B7280]">Share the ways you can help athletes (max 400 characters).</p>
+        </div>
+      )}
+
+      {isMentor && (
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-[#111827]">Preferred Contact Link (optional)</label>
           <input
-            type="text"
-            value={formData.division}
-            onChange={(e) => setFormData({ ...formData, division: e.target.value })}
-            placeholder="e.g., 17U Boys"
-            className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+            type="url"
+            value={formData.contactLink || ""}
+            onChange={(e) => setFormData({ ...formData, contactLink: e.target.value })}
+            placeholder="e.g., https://www.linkedin.com/in/yourname"
+            className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
           />
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label className="mb-2 block text-sm font-medium text-[#111827]">Sport *</label>
-          <div className="w-full rounded-xl border border-[#E5E7EB] bg-slate-50 px-4 py-3 text-base text-[#111827] font-medium">
-            Volleyball
-          </div>
-          <p className="mt-1 text-xs text-[#6B7280]">LockerLink currently supports volleyball athletes.</p>
-          <input type="hidden" name="sport" value="Volleyball" />
-        </div>
-
-        {!isCoach && !isAdmin && (
+      {/* Sport and Position (for athletes) */}
+      {isAthleteOnly && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="mb-2 block text-sm font-medium text-[#111827]">Position *</label>
+            <label className="mb-1.5 block text-xs font-medium text-[#111827]">Sport *</label>
+            <div className="w-full rounded-xl border border-[#E5E7EB] bg-slate-50 px-4 py-2.5 text-sm text-[#111827] font-medium">
+              Volleyball
+            </div>
+            <input type="hidden" name="sport" value="Volleyball" />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-[#111827]">Position *</label>
             <select
               value={formData.position}
               onChange={(e) => setFormData({ ...formData, position: e.target.value })}
               required
-              className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+              className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
             >
               <option value="">Select position</option>
               {POSITION_OPTIONS.map((option) => (
@@ -784,16 +1011,17 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
               ))}
             </select>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {!isCoach && !isAdmin && (
+      {/* Secondary Position (for athletes) */}
+      {isAthleteOnly && (
         <div>
-          <label className="mb-2 block text-sm font-medium text-[#111827]">Secondary Position (optional)</label>
+          <label className="mb-1.5 block text-xs font-medium text-[#111827]">Secondary Position (optional)</label>
           <select
             value={formData.secondaryPosition || ""}
             onChange={(e) => setFormData({ ...formData, secondaryPosition: e.target.value })}
-            className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+            className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
           >
             <option value="">None</option>
             {POSITION_OPTIONS.map((option) => (
@@ -805,10 +1033,11 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         </div>
       )}
 
-      {!isCoach && !isAdmin && (
+      {/* Vertical and Weight (for athletes/mentors) */}
+      {needsMetrics && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="mb-2 block text-sm font-medium text-[#111827]">Vertical *</label>
+            <label className="mb-1.5 block text-xs font-medium text-[#111827]">Vertical *</label>
             <div className="relative">
               <input
                 type="number"
@@ -816,15 +1045,15 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
                 max={80}
                 value={verticalInches}
                 onChange={(e) => setVerticalInches(e.target.value)}
-                required
+                required={needsMetrics}
                 placeholder="Inches"
-                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 pr-12 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 pr-12 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
               />
-              <span className="absolute inset-y-0 right-4 flex items-center text-sm text-[#6B7280]">in</span>
+              <span className="absolute inset-y-0 right-4 flex items-center text-xs text-[#6B7280]">in</span>
             </div>
           </div>
           <div>
-            <label className="mb-2 block text-sm font-medium text-[#111827]">Weight *</label>
+            <label className="mb-1.5 block text-xs font-medium text-[#111827]">Weight *</label>
             <div className="relative">
               <input
                 type="number"
@@ -832,20 +1061,21 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
                 max={400}
                 value={weightLbs}
                 onChange={(e) => setWeightLbs(e.target.value)}
-                required
+                required={needsMetrics}
                 placeholder="Pounds"
-                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 pr-14 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 pr-14 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
               />
-              <span className="absolute inset-y-0 right-4 flex items-center text-sm text-[#6B7280]">lbs</span>
+              <span className="absolute inset-y-0 right-4 flex items-center text-xs text-[#6B7280]">lbs</span>
             </div>
           </div>
         </div>
       )}
 
-      {!isCoach && !isAdmin && (
+      {/* Touch Metrics (for athletes/mentors) */}
+      {needsMetrics && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label className="mb-2 block text-sm font-medium text-[#111827]">Block Touch (optional)</label>
+            <label className="mb-1.5 block text-xs font-medium text-[#111827]">Block Touch (optional)</label>
             <div className="relative">
               <input
                 type="number"
@@ -854,13 +1084,13 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
                 value={blockTouch}
                 onChange={(e) => setBlockTouch(e.target.value)}
                 placeholder="Inches"
-                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 pr-12 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 pr-12 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
               />
-              <span className="absolute inset-y-0 right-4 flex items-center text-sm text-[#6B7280]">in</span>
+              <span className="absolute inset-y-0 right-4 flex items-center text-xs text-[#6B7280]">in</span>
             </div>
           </div>
           <div>
-            <label className="mb-2 block text-sm font-medium text-[#111827]">Standing Touch (optional)</label>
+            <label className="mb-1.5 block text-xs font-medium text-[#111827]">Standing Touch (optional)</label>
             <div className="relative">
               <input
                 type="number"
@@ -869,13 +1099,13 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
                 value={standingTouch}
                 onChange={(e) => setStandingTouch(e.target.value)}
                 placeholder="Inches"
-                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 pr-12 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 pr-12 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
               />
-              <span className="absolute inset-y-0 right-4 flex items-center text-sm text-[#6B7280]">in</span>
+              <span className="absolute inset-y-0 right-4 flex items-center text-xs text-[#6B7280]">in</span>
             </div>
           </div>
           <div>
-            <label className="mb-2 block text-sm font-medium text-[#111827]">Spike Touch (optional)</label>
+            <label className="mb-1.5 block text-xs font-medium text-[#111827]">Spike Touch (optional)</label>
             <div className="relative">
               <input
                 type="number"
@@ -884,30 +1114,31 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
                 value={spikeTouch}
                 onChange={(e) => setSpikeTouch(e.target.value)}
                 placeholder="Inches"
-                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 pr-12 text-base text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+                className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 pr-12 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
               />
-              <span className="absolute inset-y-0 right-4 flex items-center text-sm text-[#6B7280]">in</span>
+              <span className="absolute inset-y-0 right-4 flex items-center text-xs text-[#6B7280]">in</span>
             </div>
           </div>
         </div>
       )}
 
-      {!isCoach && !isAdmin ? (
+      {/* Bio (for athletes/mentors) or Message (for coaches) */}
+      {isAthleteOrMentor ? (
         <div>
-          <label className="mb-2 block text-sm font-medium text-[#111827]">Bio</label>
+          <label className="mb-1.5 block text-xs font-medium text-[#111827]">Bio</label>
           <textarea
             value={formData.bio}
             onChange={(e) => setFormData({ ...formData, bio: e.target.value.slice(0, 500) })}
             rows={4}
             maxLength={500}
             placeholder="Tell us about yourself... (e.g., OVA 17U | Working on serve receive)"
-            className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 resize-none"
+            className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 resize-none"
           />
-          <p className="mt-2 text-xs text-[#6B7280]">{formData.bio.length}/500 characters</p>
+          <p className="mt-1.5 text-xs text-[#6B7280]">{formData.bio.length}/500 characters</p>
         </div>
       ) : isCoach ? (
         <div>
-          <label className="mb-2 block text-sm font-medium text-[#111827]">Message to Athletes</label>
+          <label className="mb-1.5 block text-xs font-medium text-[#111827]">Message to Athletes</label>
           <textarea
             value={formData.coachMessage || ""}
             onChange={(e) =>
@@ -919,22 +1150,42 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
             rows={4}
             maxLength={500}
             placeholder='e.g., "Always looking for hard working setters."'
-            className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 resize-none"
+            className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 resize-none"
           />
-          <p className="mt-2 text-xs text-[#6B7280]">{formData.coachMessage?.length || 0}/500 characters</p>
+          <p className="mt-1.5 text-xs text-[#6B7280]">{formData.coachMessage?.length || 0}/500 characters</p>
         </div>
-      ) : (
+      ) : null}
+
+      {/* Achievements (for athletes/mentors) */}
+      {isAthleteOrMentor && (
         <div>
-          <label className="mb-2 block text-sm font-medium text-[#111827]">About (optional)</label>
+          <label className="mb-1.5 block text-xs font-medium text-[#111827]">Highlight Achievements (optional)</label>
           <textarea
-            value={formData.bio}
-            onChange={(e) => setFormData({ ...formData, bio: e.target.value.slice(0, 500) })}
-            rows={4}
-            maxLength={500}
-            placeholder="Share how you support your club or athlete community."
-            className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 resize-none"
+            value={formData.achievements || ""}
+            onChange={(e) => setFormData({ ...formData, achievements: e.target.value.slice(0, 400) })}
+            rows={3}
+            maxLength={400}
+            placeholder="e.g., OUA Rookie of the Year 2024 | Team Canada NextGen | Provincial Champion"
+            className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 resize-none"
           />
-          <p className="mt-2 text-xs text-[#6B7280]">{formData.bio.length}/500 characters</p>
+          <p className="mt-1.5 text-xs text-[#6B7280]">Share notable milestones (max 400 characters).</p>
+        </div>
+      )}
+
+      {/* Volleyball Background (for mentors) */}
+      {isMentor && (
+        <div>
+          <label className="mb-1.5 block text-xs font-medium text-[#111827]">Volleyball Background *</label>
+          <textarea
+            value={formData.volleyballBackground || ""}
+            onChange={(e) => setFormData({ ...formData, volleyballBackground: e.target.value.slice(0, 500) })}
+            required={isMentor}
+            rows={3}
+            maxLength={500}
+            placeholder="e.g., Played outside for XYZ University, Team Ontario alum, assistant coach at ABC club"
+            className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 resize-none"
+          />
+          <p className="mt-1.5 text-xs text-[#6B7280]">Give athletes context on your playing/coaching journey (max 500 characters).</p>
         </div>
       )}
 
@@ -943,7 +1194,7 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         disabled={saving}
         whileHover={{ scale: saving ? 1 : 1.02 }}
         whileTap={{ scale: saving ? 1 : 0.98 }}
-        className="w-full rounded-xl bg-[#007AFF] px-6 py-3.5 text-white font-medium transition-all duration-200 hover:bg-[#0056CC] disabled:bg-[#9CA3AF] disabled:cursor-not-allowed shadow-sm hover:shadow-md touch-manipulation min-h-[44px]"
+        className="w-full rounded-xl bg-[#007AFF] px-6 py-3 text-sm text-white font-medium transition-all duration-200 hover:bg-[#0056CC] disabled:bg-[#9CA3AF] disabled:cursor-not-allowed shadow-sm hover:shadow-md touch-manipulation min-h-[44px]"
       >
         {saving ? (
           <span className="flex items-center justify-center gap-2">

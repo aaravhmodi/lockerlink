@@ -19,7 +19,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const [showMenu, setShowMenu] = useState(false);
   const [showProfileReminder, setShowProfileReminder] = useState(false);
-  const [userType, setUserType] = useState<"athlete" | "coach" | "admin" | "">("");
+  const [userType, setUserType] = useState<"athlete" | "coach" | "admin" | "mentor" | "">("");
   const reminderTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const triggerProfileReminder = () => {
@@ -51,7 +51,7 @@ export default function Navbar() {
       doc(db, "users", user.uid),
       (snapshot) => {
         const data = snapshot.data();
-        setUserType((data?.userType as "athlete" | "coach" | "admin") || "athlete");
+        setUserType((data?.userType as "athlete" | "coach" | "admin" | "mentor") || "athlete");
       },
       () => {
         setUserType("athlete");

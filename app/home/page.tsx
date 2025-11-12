@@ -19,7 +19,7 @@ interface UserProfile {
   name: string;
   username?: string;
   photoURL?: string;
-  userType?: "athlete" | "coach" | "admin";
+  userType?: "athlete" | "coach" | "admin" | "mentor";
   adminRole?: "parent" | "clubAdmin" | "";
 }
 
@@ -36,8 +36,11 @@ interface Match {
 
 interface Highlight {
   id: string;
+  userId?: string;
   userName?: string;
   userPosition?: string;
+  userType?: "athlete" | "coach" | "admin" | "mentor";
+  adminRole?: "parent" | "clubAdmin" | "";
   title: string;
   upvotes: number;
   rank: number;
@@ -141,7 +144,7 @@ export default function HomePage() {
           name: data.name || "Player",
           username: data.username,
           photoURL: data.photoURL,
-          userType: (data.userType as "athlete" | "coach" | "admin") || "athlete",
+          userType: (data.userType as "athlete" | "coach" | "admin" | "mentor") || "athlete",
           adminRole: (data.adminRole as "parent" | "clubAdmin" | "") || "",
         });
       }
@@ -160,12 +163,30 @@ export default function HomePage() {
         limit(3)
       );
       const highlightsSnapshot = await getDocs(highlightsQuery);
-      const highlightsData = highlightsSnapshot.docs.map((docSnap, index) => {
+      const highlightsDataPromises = highlightsSnapshot.docs.map(async (docSnap, index) => {
         const data = docSnap.data() as any;
+        // Fetch user type from user document
+        let userType: "athlete" | "coach" | "admin" | "mentor" | undefined;
+        let adminRole: "parent" | "clubAdmin" | "" | undefined;
+        if (data.userId) {
+          try {
+            const userDoc = await getDoc(doc(db, "users", data.userId));
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              userType = userData.userType;
+              adminRole = userData.adminRole;
+            }
+          } catch (error) {
+            console.error("Error fetching user type:", error);
+          }
+        }
         return {
           id: docSnap.id,
+          userId: data.userId || "",
           userName: data.userName || "Player",
           userPosition: data.userPosition || "",
+          userType,
+          adminRole,
           title: data.title || "Highlight",
           upvotes: data.upvotes || 0,
           commentsCount: data.commentsCount || 0,
@@ -173,6 +194,7 @@ export default function HomePage() {
           thumbnailURL: data.thumbnailURL || "",
         } as Highlight;
       });
+      const highlightsData = await Promise.all(highlightsDataPromises);
       setTopHighlights(highlightsData);
 
       // Load current match (mock for now)
@@ -321,6 +343,8 @@ export default function HomePage() {
               const isAdmin = userProfile?.userType === "admin";
               const adminRole = userProfile?.adminRole;
               const isClubAdmin = isAdmin && adminRole === "clubAdmin";
+              const isMentor = userProfile?.userType === "mentor";
+
               const persona = isCoach
                 ? {
                     emoji: "🧢",
@@ -413,6 +437,37 @@ export default function HomePage() {
                       outro:
                         "LockerLink helps parents stay connected, show support, and keep young players encouraged as they grow in the game.",
                     }
+                : isMentor
+                ? {
+                    emoji: "🎓",
+                    title: "Mentor View",
+                    intro: "Use LockerLink to guide and inspire the next generation of volleyball players.",
+                    accent: "from-indigo-50 via-white to-sky-100",
+                    bullets: [
+                      {
+                        label: "Create your mentor profile",
+                        description: "Share your volleyball background, school, and playing experience.",
+                        icon: Users,
+                      },
+                      {
+                        label: "Post insights and resources",
+                        description: "Offer advice on training, mindset, or post-secondary opportunities.",
+                        icon: Sparkles,
+                      },
+                      {
+                        label: "View athlete highlights",
+                        description: "Watch player clips and provide encouragement or constructive feedback.",
+                        icon: Play,
+                      },
+                      {
+                        label: "Engage with the community",
+                        description: "Comment on posts, highlight strong performances, and share perspective from your own journey.",
+                        icon: MessageCircle,
+                      },
+                    ],
+                    outro:
+                      "LockerLink gives mentors a space to stay connected with the sport, support developing athletes, and bridge the gap between youth and post-secondary volleyball.",
+                  }
                 : {
                     emoji: "🏐",
                     title: "Athlete View",
@@ -432,15 +487,15 @@ export default function HomePage() {
                       {
                         label: "Explore coaches & mentors",
                         description: "Find shared posts, resources, and opportunities tailored to your level.",
-                        icon: Sparkles,
+                        icon: Search,
                       },
                       {
-                        label: "Engage with teammates",
-                        description: "Like, comment, and support other players to build your reputation and network.",
+                        label: "Engage & grow",
+                        description: "Like, comment, and share wins with the LockerLink community to build your presence.",
                         icon: MessageCircle,
                       },
                     ],
-                    outro: "LockerLink helps you build your athletic identity, learn from others, and stay connected with the people shaping the game.",
+                    outro: "LockerLink helps you build your volleyball identity, stay motivated, and connect with the people shaping the sport.",
                   };
 
               return (
@@ -578,48 +633,50 @@ export default function HomePage() {
             </div>
           </motion.div>
 
-          {/* Action Cards - Match and Highlights */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            {/* Highlights Challenge Card */}
-            <Link href="/highlights">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="bg-gradient-to-br from-[#3B82F6] to-[#2563EB] rounded-2xl p-6 shadow-lg cursor-pointer h-full flex flex-col"
-              >
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm mb-3">
-                    <Trophy className="w-6 h-6 text-white" />
+          {/* Action Cards - Match and Highlights - Only for Athletes */}
+          {userProfile?.userType === "athlete" && (
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              {/* Highlights Challenge Card */}
+              <Link href="/highlights">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="bg-gradient-to-br from-[#3B82F6] to-[#2563EB] rounded-2xl p-6 shadow-lg cursor-pointer h-full flex flex-col"
+                >
+                  <div className="flex flex-col items-center text-center">
+                    <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm mb-3">
+                      <Trophy className="w-6 h-6 text-white" />
+                    </div>
+                    <h2 className="text-white text-lg font-semibold mb-1">Highlight Challenge</h2>
+                    <p className="text-white/90 text-sm">Submit your best plays.</p>
                   </div>
-                  <h2 className="text-white text-lg font-semibold mb-1">Highlight Challenge</h2>
-                  <p className="text-white/90 text-sm">Submit your best plays.</p>
-                </div>
-              </motion.div>
-            </Link>
+                </motion.div>
+              </Link>
 
-            {/* Find Players Card */}
-            <Link href="/match">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="bg-gradient-to-br from-[#F43F5E] to-[#E11D48] rounded-2xl p-6 shadow-lg cursor-pointer h-full flex flex-col"
-              >
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm mb-3">
-                    <Users className="w-6 h-6 text-white" />
+              {/* Find Players Card */}
+              <Link href="/match">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="bg-gradient-to-br from-[#F43F5E] to-[#E11D48] rounded-2xl p-6 shadow-lg cursor-pointer h-full flex flex-col"
+                >
+                  <div className="flex flex-col items-center text-center">
+                    <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm mb-3">
+                      <Users className="w-6 h-6 text-white" />
+                    </div>
+                    <h2 className="text-white text-lg font-semibold mb-1">Find Players</h2>
+                    <p className="text-white/90 text-sm">Connect with teammates.</p>
                   </div>
-                  <h2 className="text-white text-lg font-semibold mb-1">Find Players</h2>
-                  <p className="text-white/90 text-sm">Connect with teammates.</p>
-                </div>
-              </motion.div>
-            </Link>
-          </div>
+                </motion.div>
+              </Link>
+            </div>
+          )}
 
           {/* Post Composer */}
           <motion.div
@@ -690,10 +747,33 @@ export default function HomePage() {
                                 .join("")
                             : "PL"}
                         </div>
-                        <div>
-                          <h4 className="text-sm font-semibold text-[#0F172A]">
-                            {highlight.userName || "Player"}
-                          </h4>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="text-sm font-semibold text-[#0F172A]">
+                              {highlight.userName || "Player"}
+                            </h4>
+                            {highlight.userType && (
+                              <span
+                                className={`inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-medium flex-shrink-0 ${
+                                  highlight.userType === "athlete"
+                                    ? "bg-blue-50 text-[#3B82F6]"
+                                    : highlight.userType === "mentor"
+                                    ? "bg-purple-50 text-purple-700"
+                                    : highlight.userType === "coach"
+                                    ? "bg-green-50 text-green-700"
+                                    : highlight.userType === "admin"
+                                    ? "bg-orange-50 text-orange-700"
+                                    : "bg-slate-50 text-slate-700"
+                                }`}
+                              >
+                                {highlight.userType === "admin"
+                                  ? highlight.adminRole === "clubAdmin"
+                                    ? "Club Admin"
+                                    : "Parent/Guardian"
+                                  : highlight.userType.charAt(0).toUpperCase() + highlight.userType.slice(1)}
+                              </span>
+                            )}
+                          </div>
                           {highlight.userPosition && (
                             <p className="text-xs text-slate-500">{highlight.userPosition}</p>
                           )}

@@ -15,7 +15,7 @@ export default function ProfileGuard({ children }: ProfileGuardProps) {
   const { user, loading: userLoading } = useUser();
   const { isComplete, loading: profileLoading } = useProfileComplete();
   const router = useRouter();
-  const [userType, setUserType] = useState<"athlete" | "coach" | "admin" | "">("");
+  const [userType, setUserType] = useState<"athlete" | "coach" | "admin" | "mentor" | "">("");
 
   useEffect(() => {
     if (!userLoading && !profileLoading) {
@@ -40,7 +40,7 @@ export default function ProfileGuard({ children }: ProfileGuardProps) {
       doc(db, "users", user.uid),
       (snapshot) => {
         const data = snapshot.data();
-        setUserType((data?.userType as "athlete" | "coach" | "admin") || "");
+        setUserType((data?.userType as "athlete" | "coach" | "admin" | "mentor") || "");
       },
       () => setUserType("")
     );
@@ -101,7 +101,13 @@ export default function ProfileGuard({ children }: ProfileGuardProps) {
           </svg>
           <h2 className="text-xl font-semibold text-[#111827] mb-2">Complete Your Profile</h2>
           <p className="text-[#6B7280] mb-4">
-            Finish setting up your profile and upload a highlight to unlock Explore, Match, Messages, and Highlights.
+            {userType === "coach"
+              ? "Finish adding your coaching details so you can explore highlights and manage athletes."
+              : userType === "admin"
+              ? "Finish your admin details so you can oversee the community."
+              : userType === "mentor"
+              ? "Finish setting up your mentor profile and upload a highlight to unlock the rest of LockerLink."
+              : "Finish setting up your profile and upload a highlight to unlock Explore, Match, Messages, and Highlights."}
           </p>
           <button
             onClick={() => router.push("/profile")}
