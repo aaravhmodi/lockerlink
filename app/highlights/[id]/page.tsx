@@ -160,6 +160,23 @@ export default function HighlightViewerPage({ params }: { params: Promise<{ id: 
         likedBy: alreadyLiked ? arrayRemove(user.uid) : arrayUnion(user.uid),
       });
 
+      // Handle points for liking/unliking
+      if (!alreadyLiked) {
+        // User is liking - award points to user and creator
+        const { awardPoints, awardCreatorPoints } = await import("@/utils/pointsSystem");
+        await awardPoints(user.uid, 2, "likeGiven", false); // Unlimited likes
+        if (highlight.userId && highlight.userId !== user.uid) {
+          await awardCreatorPoints(highlight.userId, 2); // Creator gets points for receiving like
+        }
+      } else {
+        // User is unliking - deduct points
+        const { deductPoints } = await import("@/utils/pointsSystem");
+        await deductPoints(user.uid, 2);
+        if (highlight.userId && highlight.userId !== user.uid) {
+          await deductPoints(highlight.userId, 2); // Creator loses points
+        }
+      }
+
       setHighlight((prev) =>
         prev
           ? {
@@ -180,8 +197,25 @@ export default function HighlightViewerPage({ params }: { params: Promise<{ id: 
   const handleAddComment = async () => {
     if (!user || !highlight || !commentText.trim() || addingComment) return;
 
+    // Validate comment length (minimum 15 characters)
+    const { validateCommentLength } = await import("@/utils/pointsSystem");
+    if (!validateCommentLength(commentText)) {
+      alert("Comments must be at least 15 characters long to earn points.");
+      return;
+    }
+
     setAddingComment(true);
     try {
+      // Check daily limit and award points for commenting
+      const { awardPoints, awardCreatorPoints } = await import("@/utils/pointsSystem");
+      const pointsResult = await awardPoints(user.uid, 5, "commentGiven", true, 5);
+      
+      if (!pointsResult.success) {
+        alert(pointsResult.message || "Daily limit reached");
+        setAddingComment(false);
+        return;
+      }
+
       const commentsRef = collection(db, "highlights", highlight.id, "comments");
       await addDoc(commentsRef, {
         userId: user.uid,
@@ -194,6 +228,11 @@ export default function HighlightViewerPage({ params }: { params: Promise<{ id: 
       await updateDoc(doc(db, "highlights", highlight.id), {
         commentsCount: increment(1),
       });
+
+      // Award points to creator for receiving comment
+      if (highlight.userId && highlight.userId !== user.uid) {
+        await awardCreatorPoints(highlight.userId, 5);
+      }
 
       setHighlight((prev) =>
         prev
@@ -223,11 +262,15 @@ export default function HighlightViewerPage({ params }: { params: Promise<{ id: 
   const handleDeleteHighlight = async () => {
     if (!highlight || !user || highlight.userId !== user.uid || deleting) return;
 
-    const confirmDelete = window.confirm("Delete this highlight? This can’t be undone.");
+    const confirmDelete = window.confirm("Delete this highlight? This can't be undone.");
     if (!confirmDelete) return;
 
     setDeleting(true);
     try {
+      // Deduct points for deleted highlight (10 points)
+      const { deductPoints } = await import("@/utils/pointsSystem");
+      await deductPoints(user.uid, 10);
+
       await deleteDoc(doc(db, "highlights", highlight.id));
 
       if (safeReturnUrl) {

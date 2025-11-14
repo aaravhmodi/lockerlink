@@ -226,6 +226,23 @@ export default function HighlightsPage() {
         likedBy: hasLiked ? arrayRemove(user.uid) : arrayUnion(user.uid),
       });
 
+      // Handle points for liking/unliking
+      if (!hasLiked) {
+        // User is liking - award points to user and creator
+        const { awardPoints, awardCreatorPoints } = await import("@/utils/pointsSystem");
+        await awardPoints(user.uid, 2, "likeGiven", false); // Unlimited likes
+        if (highlight.userId && highlight.userId !== user.uid) {
+          await awardCreatorPoints(highlight.userId, 2); // Creator gets points for receiving like
+        }
+      } else {
+        // User is unliking - deduct points
+        const { deductPoints } = await import("@/utils/pointsSystem");
+        await deductPoints(user.uid, 2);
+        if (highlight.userId && highlight.userId !== user.uid) {
+          await deductPoints(highlight.userId, 2); // Creator loses points
+        }
+      }
+
       setHighlights((prev) =>
         prev.map((h) =>
           h.id === highlightId

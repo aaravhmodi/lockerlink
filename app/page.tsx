@@ -10,6 +10,7 @@ import { auth, db } from "@/lib/firebase";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { FcGoogle } from "react-icons/fc";
+import { FileText } from "lucide-react";
 
 export default function LoginPage() {
   const { user, loading } = useUser();
@@ -239,6 +240,20 @@ export default function LoginPage() {
             {isSignUp ? "Sign In" : "Sign Up"}
           </button>
         </p>
+
+        <div className="mt-6 pt-6 border-t border-[#E5E7EB]">
+          <motion.a
+            href="https://docs.google.com/document/d/1eAsqtgaByUdnsLy4Oq2KOOYkayC8xm1QsopAXwOUsXg/edit?usp=sharing"
+            target="_blank"
+            rel="noopener noreferrer"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="flex items-center justify-center gap-2 w-full rounded-xl bg-gradient-to-br from-[#60A5FA] to-[#3B82F6] px-4 py-3 text-sm font-medium text-white hover:from-[#3B82F6] hover:to-[#2563EB] transition-all duration-200 shadow-md hover:shadow-lg"
+          >
+            <FileText className="w-4 h-4 flex-shrink-0" />
+            <span className="text-center">LockerLink Compliance with OVA Regulations & Coach-to-Player Interaction</span>
+          </motion.a>
+        </div>
       </motion.div>
     </div>
   );

@@ -40,10 +40,15 @@ service cloud.firestore {
     }
 
     // User profiles - anyone can read, only owner can write
+    // Allow points and dailyActivity updates for points system
     match /users/{userId} {
       allow read: if true;
       allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
+      allow update: if isOwner(userId) || 
+        (isSignedIn() && 
+         request.resource.data.diff(resource.data).changedKeys().hasOnly(["points", "dailyActivity"]) &&
+         request.resource.data.points is int &&
+         request.resource.data.dailyActivity is map);
       allow delete: if isOwner(userId);
     }
     

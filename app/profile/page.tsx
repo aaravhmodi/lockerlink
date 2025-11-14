@@ -34,6 +34,7 @@ import { formatHeight, formatVertical, formatWeight, formatTouch } from "@/utils
 import FeedCard from "@/components/FeedCard";
 import ManagePostsModal from "@/components/ManagePostsModal";
 import BackButton from "@/components/BackButton";
+import { awardPoints, deductPoints } from "@/utils/pointsSystem";
 
 interface UserProfile {
   name: string;
@@ -506,6 +507,15 @@ export default function ProfilePage() {
 
     setUploading(true);
     try {
+      // Check daily limit and award points
+      const pointsResult = await awardPoints(user.uid, 10, "highlightPosted", true, 2);
+      
+      if (!pointsResult.success) {
+        alert(pointsResult.message || "Daily limit reached");
+        setUploading(false);
+        return;
+      }
+
       const videoUpload = await uploadVideoToCloudinary(videoFile);
 
       let thumbnailURL = "";
@@ -550,7 +560,7 @@ export default function ProfilePage() {
       
       // Reload highlights
       await loadProfile();
-      alert("Highlight uploaded successfully!");
+      alert(`Highlight uploaded successfully! +${pointsResult.pointsAwarded} points`);
     } catch (error) {
       console.error("Error uploading highlight:", error);
       alert("Failed to upload highlight. Please try again.");
@@ -650,7 +660,7 @@ export default function ProfilePage() {
     : [];
 
   // Athlete stats (8 cards: Height, Vertical, Weight, Highlights, Points, Block Touch, Standing Touch, Spike Touch)
-  const athleteStats: { label: string; value: string; icon: any; badge?: string }[] = (() => {
+  const athleteStats: { label: string; value: string; icon: any; badge?: string; clickable?: boolean }[] = (() => {
     if (!isAthleteProfile) return [];
 
     return [
@@ -679,6 +689,7 @@ export default function ProfilePage() {
         value: userProfile?.points !== undefined ? `${userProfile.points}` : "0",
         icon: Star,
         badge: "BETA",
+        clickable: true,
       },
       {
         label: "Block Touch",
@@ -1037,9 +1048,14 @@ export default function ProfilePage() {
               {athleteStats.map((stat, index) => {
                 const Icon = stat.icon;
                 return (
-                  <div
+                  <motion.div
                     key={stat.label}
-                    className="bg-white rounded-2xl border border-slate-200 p-4 flex flex-col items-center text-center"
+                    onClick={() => stat.clickable && router.push("/profile/points")}
+                    className={`bg-white rounded-2xl border border-slate-200 p-4 flex flex-col items-center text-center ${
+                      stat.clickable ? "cursor-pointer hover:border-[#3B82F6] hover:shadow-md transition-all" : ""
+                    }`}
+                    whileHover={stat.clickable ? { scale: 1.02 } : {}}
+                    whileTap={stat.clickable ? { scale: 0.98 } : {}}
                   >
                     <div className="mb-2 flex items-center justify-center">
                       <Icon className="w-5 h-5 text-[#3B82F6]" />
@@ -1053,7 +1069,7 @@ export default function ProfilePage() {
                         </span>
                       )}
                     </div>
-                  </div>
+                  </motion.div>
                 );
               })}
             </div>

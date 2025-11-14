@@ -75,6 +75,11 @@ export default function Navbar() {
       return;
     }
 
+    // Allow access to profile/points page
+    if (href.startsWith("/profile/points")) {
+      return;
+    }
+
     if (!profileLoading && !isComplete && href !== "/profile") {
       event.preventDefault();
       triggerProfileReminder();
