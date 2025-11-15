@@ -17,8 +17,9 @@ A social messaging app for OVA volleyball players built with Next.js, Firebase, 
 npm install
 ```
 
-2. Create `.env.local` file in the root directory with your Firebase config:
+2. Create `.env.local` file in the root directory with your configuration:
 ```bash
+# Firebase Configuration
 NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_auth_domain
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
@@ -26,6 +27,15 @@ NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_storage_bucket
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id
+
+# EmailJS Configuration (for welcome emails)
+NEXT_PUBLIC_EMAILJS_SERVICE_ID=your_service_id
+NEXT_PUBLIC_EMAILJS_TEMPLATE_ID=your_template_id
+NEXT_PUBLIC_EMAILJS_PUBLIC_KEY=your_public_key
+
+# Cloudinary Configuration (for media uploads)
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=your_upload_preset
 ```
 
 3. Run the development server:
@@ -40,20 +50,30 @@ npm run dev
 ```
 /lockerlink
 ├── app/                    # Next.js App Router pages
-│   ├── home/              # Home feed page
+│   ├── home/              # Home feed page with highlights challenge
 │   ├── explore/           # Explore players & posts
+│   ├── highlights/        # Highlights challenge page
 │   ├── messages/          # Messaging pages
-│   └── profile/           # Profile pages
+│   ├── profile/           # Profile pages
+│   │   └── points/        # Points system & leaderboard
+│   └── role/              # Role selection page
 ├── components/            # React components
 │   ├── Navbar.tsx
 │   ├── FeedCard.tsx
 │   ├── ChatList.tsx
 │   ├── ChatWindow.tsx
-│   └── ProfileForm.tsx
+│   ├── ProfileForm.tsx
+│   └── ProfileGuard.tsx   # Profile completion guard
+├── hooks/                 # Custom React hooks
+│   ├── useUser.ts         # User authentication & welcome email
+│   └── useProfileComplete.ts
 ├── lib/                   # Utilities
 │   └── firebase.ts        # Firebase configuration
-└── hooks/                 # Custom React hooks
-    └── useUser.ts
+└── utils/                 # Utility functions
+    ├── sendEmail.ts       # EmailJS welcome email service
+    ├── pointsSystem.ts    # Points calculation & management
+    ├── uploadToCloudinary.ts  # Cloudinary media upload
+    └── formatMetrics.ts   # Metrics formatting utilities
 ```
 
 ## 🔥 Firebase Setup
@@ -126,33 +146,145 @@ service firebase.storage {
 
 ## 🎯 Core Features
 
-- ✅ User authentication (Email/Password + Google)
-- ✅ User profiles with team, position, bio
-- ✅ Social feed (create posts with images)
-- ✅ Explore players and posts
+### Authentication & User Management
+- ✅ User authentication (Email/Password + Google Sign-In)
+- ✅ Role-based access control (Athlete, Mentor, Coach, Admin)
+- ✅ Profile completion guard system
+- ✅ User type switching with data cleanup
+- ✅ Welcome email automation via EmailJS
+
+### Social Features
+- ✅ Social feed with posts, images, and videos
+- ✅ Post likes, comments, and engagement
+- ✅ Explore players, teams, and positions
 - ✅ Real-time 1:1 messaging
-- ✅ Profile management
+- ✅ User search functionality
+- ✅ Profile viewing with role tags
+
+### Highlights & Challenges
+- ✅ Best Spike Challenge with upvote-based ranking
+- ✅ Highlight video uploads with Cloudinary
+- ✅ Challenge leaderboard (top 3 ranked)
+- ✅ Real-time challenge entry tracking
+- ✅ Highlight comments and likes
+
+### Points System
+- ✅ Engagement-based points system
+- ✅ Daily limits with EST midnight reset:
+  - Liking videos: 2 points (unlimited)
+  - Commenting: 5 points (max 5/day, min 15 chars)
+  - Posting highlights: 10 points (max 2/day)
+- ✅ Creator rewards (points for likes/comments on your content)
+- ✅ Points leaderboard with rankings
+- ✅ Clickable points tile with detailed stats page
+
+### Profile Features
+- ✅ Comprehensive athlete profiles (stats, metrics, bio)
+- ✅ Coach profiles (team, region, division, age group)
+- ✅ Profile editing and management
+- ✅ Post management (create, view, delete)
+- ✅ Highlights gallery
+- ✅ Points display and tracking
+
+### Media Management
+- ✅ Cloudinary integration for image/video uploads
+- ✅ Video thumbnails auto-generation
+- ✅ Profile photo uploads
+- ✅ Post media attachments
+
+## 📧 EmailJS Integration
+
+LockerLink uses EmailJS to automatically send welcome emails to new users on their first signup.
+
+### Setup
+
+1. Create an account at [EmailJS](https://www.emailjs.com/)
+2. Create an email service (Gmail, SendGrid, etc.)
+3. Create an email template with:
+   - Variable: `{{email}}` for user's email address
+   - Links to Discord server and feedback form
+4. Add your EmailJS credentials to `.env.local`:
+   ```bash
+   NEXT_PUBLIC_EMAILJS_SERVICE_ID=your_service_id
+   NEXT_PUBLIC_EMAILJS_TEMPLATE_ID=your_template_id
+   NEXT_PUBLIC_EMAILJS_PUBLIC_KEY=your_public_key
+   ```
+
+### How It Works
+
+- Automatically triggered on first user signup (when `creationTime === lastSignInTime`)
+- Prevents duplicate sends with Firestore flag (`welcomeEmailSent`)
+- Session-level protection to prevent rapid duplicate sends
+- Uses Apple-style minimalistic email template
+
+### Email Template Variables
+
+- `{{email}}` - User's email address
 
 ## 📝 Firestore Collections
 
-- `users` - Player profiles
-- `posts` - Feed posts
+- `users` - User profiles with role, stats, points, and welcome email flag
+- `posts` - Feed posts with images/videos
+- `highlights` - Challenge highlight submissions with upvotes
 - `chats` - Chat thread metadata
 - `messages` - Individual chat messages
+- `comments` - Comments on posts (subcollections)
+- `highlightComments` - Comments on highlights (subcollections)
 
 ## 🚢 Deployment
 
-Deploy to Vercel (free):
+LockerLink is deployed on **Vercel** with integrated services:
+
+### Deployment Stack
+- **Frontend & Backend**: Next.js deployed on Vercel
+- **Database & Auth**: Firebase (Firestore, Authentication) hosted on Google Cloud
+- **Media Storage**: Cloudinary for image/video uploads and transformations
+- **Email Service**: EmailJS for transactional emails
+
+### Deployment Steps
 
 1. Push your code to GitHub
-2. Import project in Vercel
-3. Add environment variables in Vercel dashboard
-4. Deploy!
+2. Import project in Vercel dashboard
+3. Add all environment variables in Vercel:
+   - Firebase configuration
+   - EmailJS credentials
+   - Cloudinary credentials
+4. Configure Firebase Authorized Domains with your Vercel URL
+5. Deploy!
 
-## 🔜 Next Steps
+### Environment Variables for Production
+
+Make sure to add all variables from `.env.local` to Vercel's environment variables section. The app will automatically use these in production.
+
+### Firebase Deployment
+
+Firebase services (Firestore, Authentication, Storage) are automatically deployed and managed through Firebase Console. Security rules are defined in `firestore.rules` and `storage.rules`.
+
+### Cloudinary Setup
+
+1. Create a Cloudinary account
+2. Configure upload presets for unsigned uploads
+3. Add cloud name and preset to environment variables
+4. Media is automatically optimized and delivered via CDN
+
+## 🛠️ Tech Stack
+
+- **Framework**: Next.js 16 with App Router
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **Animations**: Framer Motion
+- **Database**: Firebase Firestore
+- **Authentication**: Firebase Auth
+- **Storage**: Cloudinary (media) + Firebase Storage (optional)
+- **Email**: EmailJS
+- **Deployment**: Vercel
+- **Analytics**: Vercel Analytics
+
+## 🔜 Future Enhancements
 
 - [ ] Weekly match-making automation
-- [ ] Coach profiles & office hours
 - [ ] Push notifications
-- [ ] Post likes & comments
-- [ ] Tournament integration
+- [ ] Advanced tournament integration
+- [ ] Video streaming optimization
+- [ ] Social sharing features
+- [ ] Mobile app (React Native)
