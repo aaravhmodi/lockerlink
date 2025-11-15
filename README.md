@@ -1,4 +1,4 @@
-# LockerLink MVP 2.0
+# LockerLink 
 
 A social messaging app for OVA volleyball players built with Next.js, Firebase, and Tailwind CSS.
 
