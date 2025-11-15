@@ -149,11 +149,18 @@ export default function HomePage() {
         });
       }
 
-      // Mock data for now - replace with Firestore queries
+      // Load challenge entries count
+      const challengeEntriesQuery = query(
+        collection(db, "highlights"),
+        where("submittedToChallenge", "==", true)
+      );
+      const challengeEntriesSnapshot = await getDocs(challengeEntriesQuery);
+      const challengeEntriesCount = challengeEntriesSnapshot.size;
+
       setCurrentChallenge({
-        title: "Best Block Challenge 🔥",
+        title: "Best Spike Challenge 🔥",
         endDate: Date.now() + 2 * 24 * 60 * 60 * 1000, // 2 days
-        entries: 1200,
+        entries: challengeEntriesCount,
       });
 
       // Load top highlights from Firestore
@@ -697,8 +704,11 @@ export default function HomePage() {
               className="mb-6"
             >
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-[#0F172A] font-semibold text-lg">Latest Highlights</h2>
-                <Link href="/highlights" className="text-sm font-semibold text-[#3B82F6] hover:underline">
+                <div>
+                  <h2 className="text-[#0F172A] font-semibold text-lg mb-1">Show Your Best Clip</h2>
+                  <p className="text-sm text-slate-600">Share your highlights and get noticed by coaches and teammates</p>
+                </div>
+                <Link href="/highlights" className="text-sm font-semibold text-[#3B82F6] hover:underline flex-shrink-0">
                   View all
                 </Link>
                 </div>

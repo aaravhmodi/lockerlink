@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useUser } from "@/hooks/useUser";
-import { collection, query, orderBy, limit, addDoc, serverTimestamp, doc, updateDoc, increment, onSnapshot, arrayUnion, arrayRemove, getDoc, setDoc } from "firebase/firestore";
+import { collection, query, orderBy, limit, addDoc, serverTimestamp, doc, updateDoc, increment, onSnapshot, arrayUnion, arrayRemove, getDoc, setDoc, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Navbar from "@/components/Navbar";
 import ProfileGuard from "@/components/ProfileGuard";
@@ -83,15 +83,41 @@ export default function HighlightsPage() {
     
     setLoading(true);
     try {
-      // Challenge data (static for now)
-      setCurrentChallenge({
+      // Challenge data
+      const challengeData = {
         id: "challenge-1",
-        title: "Best Block Challenge 🔥",
-        description: "Show us your best blocking technique! Winners get featured on our homepage.",
+        title: "Best Spike Challenge 🔥",
+        description: "Show us your best spike! The highlight with the most upvotes wins. Winners get featured on our homepage.",
         endDate: Date.now() + 2 * 24 * 60 * 60 * 1000,
-        category: "Blocking",
-        entries: 1200,
-      });
+        category: "Spike",
+        entries: 0, // Will be updated from actual highlights
+      };
+
+      // Load challenge entries count (all highlights submitted to challenge)
+      const loadChallengeCount = async () => {
+        try {
+          const challengeEntriesQuery = query(
+            collection(db, "highlights"),
+            where("submittedToChallenge", "==", true)
+          );
+          const challengeEntriesSnapshot = await getDocs(challengeEntriesQuery);
+          const challengeCount = challengeEntriesSnapshot.size;
+          
+          setCurrentChallenge({
+            ...challengeData,
+            entries: challengeCount,
+          });
+        } catch (error) {
+          console.error("Error loading challenge count:", error);
+          setCurrentChallenge({
+            ...challengeData,
+            entries: 0,
+          });
+        }
+      };
+
+      // Initial load of challenge count
+      await loadChallengeCount();
 
       const highlightsQuery = query(
         collection(db, "highlights"),
@@ -99,7 +125,7 @@ export default function HighlightsPage() {
         limit(25)
       );
 
-      const unsubscribe = onSnapshot(highlightsQuery, (snapshot) => {
+      const unsubscribe = onSnapshot(highlightsQuery, async (snapshot) => {
         const highlightData = snapshot.docs.map((docSnap) => {
           const data = docSnap.data() as any;
           return {
@@ -120,6 +146,9 @@ export default function HighlightsPage() {
             ...highlight,
             rank: index < 3 ? index + 1 : undefined,
           }));
+
+        // Update challenge entries count when highlights change
+        await loadChallengeCount();
 
         setHighlights(ranked);
         setLoading(false);
@@ -338,7 +367,7 @@ export default function HighlightsPage() {
                 </div>
                 <div className="flex-1">
                   <h3 className="text-white mb-1 font-semibold">Submit Your Highlight</h3>
-                  <p className="text-amber-100 text-sm">Upload your best block and win prizes!</p>
+                  <p className="text-amber-100 text-sm">Upload your best spike! Get upvotes to win prizes!</p>
                 </div>
               </div>
             </motion.div>
@@ -475,7 +504,7 @@ export default function HighlightsPage() {
                   <Trophy className="w-5 h-5 text-[#FACC15] mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="mb-1">
-                      <span className="text-[#0F172A] font-medium">Prizes:</span> Winner gets featured on the app and LockerLink merch
+                      <span className="text-[#0F172A] font-medium">How to Win:</span> The highlight with the most upvotes wins! Winners get featured on the app and LockerLink merch.
                     </p>
                   </div>
                 </div>
