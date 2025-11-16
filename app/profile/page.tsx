@@ -47,11 +47,14 @@ interface UserProfile {
   birthYear?: string;
   city?: string;
   height?: string;
+  parentHeight?: string;
   vertical?: string;
   weight?: string;
   blockTouch?: string;
   standingTouch?: string;
   spikeTouch?: string;
+  wingspan?: string;
+  shoeSize?: string;
   points?: number;
   photoURL?: string;
   bio?: string;
@@ -313,11 +316,14 @@ export default function ProfilePage() {
           birthYear: data.birthYear,
           city: data.city,
           height: data.height,
+          parentHeight: data.parentHeight,
           vertical: data.vertical,
           weight: data.weight,
           blockTouch: data.blockTouch,
           standingTouch: data.standingTouch,
           spikeTouch: data.spikeTouch,
+          wingspan: data.wingspan,
+          shoeSize: data.shoeSize,
           photoURL: data.photoURL,
           bio: data.bio,
           userType: (data.userType as "athlete" | "coach" | "admin" | "mentor") || "athlete",
@@ -569,8 +575,6 @@ export default function ProfilePage() {
     }
   };
 
-  const derivedAge = calculateAge(userProfile?.birthMonth, userProfile?.birthYear);
-
   const athleteInfoCards = isAthleteProfile
     ? [
         userProfile?.team
@@ -591,10 +595,10 @@ export default function ProfilePage() {
               value: userProfile.ageGroup,
             }
           : null,
-        derivedAge !== undefined
+        userProfile?.birthMonth && userProfile?.birthYear
           ? {
-              label: "AGE",
-              value: `${derivedAge}`,
+              label: "BIRTH",
+              value: `${String(userProfile.birthMonth).slice(0, 3)} ${userProfile.birthYear}`,
             }
           : null,
       ].filter(Boolean) as { label: string; value: string }[]
@@ -669,6 +673,13 @@ export default function ProfilePage() {
         value: formatHeight(userProfile?.height),
         icon: TrendingUp,
       },
+      userProfile?.parentHeight
+        ? {
+            label: "Tallest Parent Height",
+            value: formatHeight(userProfile?.parentHeight),
+            icon: TrendingUp,
+          }
+        : null,
       {
         label: "Vertical",
         value: formatVertical(userProfile?.vertical),
@@ -679,6 +690,20 @@ export default function ProfilePage() {
         value: formatWeight(userProfile?.weight),
         icon: Trophy,
       },
+      userProfile?.wingspan
+        ? {
+            label: "Wingspan",
+            value: userProfile.wingspan || "",
+            icon: ArrowUp,
+          }
+        : null,
+      userProfile?.shoeSize
+        ? {
+            label: "Shoe Size",
+            value: `${userProfile.shoeSize}`,
+            icon: Users,
+          }
+        : null,
       {
         label: "Highlights",
         value: highlights.length.toString(),
@@ -706,7 +731,7 @@ export default function ProfilePage() {
         value: formatTouch(userProfile?.spikeTouch),
         icon: Zap,
       },
-    ];
+    ].filter(Boolean) as { label: string; value: string; icon: any; badge?: string; clickable?: boolean }[];
   })();
 
   // Mentor stats (Height, Weight, Vertical, Highlights, and touch metrics if available)
@@ -1022,7 +1047,7 @@ export default function ProfilePage() {
                   <p className="text-slate-500 text-xs font-semibold uppercase tracking-wide mb-1.5">
                     {card.label}
                   </p>
-                  <p className="text-[#0F172A] font-semibold text-base">{card.value.toLowerCase()}</p>
+                  <p className="text-[#0F172A] font-semibold text-base">{card.value}</p>
                 </div>
               ))}
             </div>

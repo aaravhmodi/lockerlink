@@ -21,11 +21,14 @@ interface UserProfile {
   sport: string;
   bio: string;
   height: string;
+  parentHeight?: string;
   vertical: string;
   weight: string;
   blockTouch?: string;
   standingTouch?: string;
   spikeTouch?: string;
+  wingspan?: string;
+  shoeSize?: string;
   points?: number;
   photoURL?: string;
   userType: "athlete" | "coach" | "admin" | "mentor";
@@ -141,11 +144,15 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [heightFeet, setHeightFeet] = useState<string>("");
   const [heightInches, setHeightInches] = useState<string>("");
+  const [parentHeightFeet, setParentHeightFeet] = useState<string>("");
+  const [parentHeightInches, setParentHeightInches] = useState<string>("");
   const [verticalInches, setVerticalInches] = useState<string>("");
   const [weightLbs, setWeightLbs] = useState<string>("");
   const [blockTouch, setBlockTouch] = useState<string>("");
   const [standingTouch, setStandingTouch] = useState<string>("");
   const [spikeTouch, setSpikeTouch] = useState<string>("");
+  const [wingspanInches, setWingspanInches] = useState<string>("");
+  const [shoeSize, setShoeSize] = useState<string>("");
   const isCoach = formData.userType === "coach";
   const isAdmin = formData.userType === "admin";
   const isMentor = formData.userType === "mentor";
@@ -163,11 +170,13 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         if (userDoc.exists()) {
           const data = userDoc.data() as any;
           const heightParts = parseHeightValue(data.height);
+          const parentHeightParts = parseHeightValue(data.parentHeight);
           const verticalValue = parseNumericValue(data.vertical);
           const weightValue = parseNumericValue(data.weight);
           const blockValue = parseNumericValue(data.blockTouch);
           const standingValue = parseNumericValue(data.standingTouch);
           const spikeValue = parseNumericValue(data.spikeTouch);
+          const wingspanValue = parseNumericValue(data.wingspan);
           const derivedAgeGroup = data.ageGroup || convertAgeToGroup(data.age);
           const resolvedAdminRole = data.userType === "admin" ? (data.adminRole || "parent") : "";
 
@@ -192,11 +201,14 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
               sport: data.sport || "Volleyball",
               bio: data.bio || "",
               height: data.height || "",
+              parentHeight: data.parentHeight || "",
               vertical: data.vertical || "",
               weight: data.weight || "",
               blockTouch: data.blockTouch || "",
               standingTouch: data.standingTouch || "",
               spikeTouch: data.spikeTouch || "",
+              wingspan: data.wingspan || "",
+              shoeSize: data.shoeSize || "",
               points: typeof data.points === "number" ? data.points : 0,
               photoURL: data.photoURL || "",
               userType: (data.userType as "athlete" | "coach" | "admin" | "mentor") || "athlete",
@@ -213,22 +225,30 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
             });
           setHeightFeet(heightParts.feet);
           setHeightInches(heightParts.inches);
+          setParentHeightFeet(parentHeightParts.feet);
+          setParentHeightInches(parentHeightParts.inches);
           setVerticalInches(verticalValue);
           setWeightLbs(weightValue);
           setBlockTouch(blockValue);
           setStandingTouch(standingValue);
           setSpikeTouch(spikeValue);
+          setWingspanInches(wingspanValue);
+          setShoeSize(data.shoeSize || "");
           if (data.photoURL) {
             setPhotoPreview(null);
           }
         } else {
           setHeightFeet("");
           setHeightInches("");
+          setParentHeightFeet("");
+          setParentHeightInches("");
           setVerticalInches("");
           setWeightLbs("");
           setBlockTouch("");
           setStandingTouch("");
           setSpikeTouch("");
+          setWingspanInches("");
+          setShoeSize("");
           setFormData((prev) => ({
             ...prev,
             userType: "athlete",
@@ -239,6 +259,8 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
             blockTouch: "",
             standingTouch: "",
             spikeTouch: "",
+            wingspan: "",
+            shoeSize: "",
             points: 0,
             ogLockerLinkUser: prev.ogLockerLinkUser ?? true,
             adminRole: "",
@@ -376,6 +398,9 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
       const inchValue = heightInches ? parseInt(heightInches, 10) : 0;
       const verticalValue = verticalInches ? parseInt(verticalInches, 10) : 0;
       const weightValue = weightLbs ? parseInt(weightLbs, 10) : 0;
+      const parentFeetValue = parentHeightFeet ? parseInt(parentHeightFeet, 10) : 0;
+      const parentInchValue = parentHeightInches ? parseInt(parentHeightInches, 10) : 0;
+      const wingspanValue = wingspanInches ? parseInt(wingspanInches, 10) : 0;
       const blockValue = blockTouch ? parseInt(blockTouch, 10) : 0;
       const standingValue = standingTouch ? parseInt(standingTouch, 10) : 0;
       const spikeValue = spikeTouch ? parseInt(spikeTouch, 10) : 0;
@@ -394,6 +419,12 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         isCoachSubmit || isAdminSubmit || !verticalValue ? "" : `${verticalValue}"`;
       const normalizedWeight =
         isCoachSubmit || isAdminSubmit || !weightValue ? "" : `${weightValue} lbs`;
+      const normalizedParentHeight =
+        isCoachSubmit || isAdminSubmit || (!parentFeetValue && !parentInchValue)
+          ? ""
+          : `${parentFeetValue}'${parentInchValue}"`;
+      const normalizedWingspan =
+        isCoachSubmit || isAdminSubmit || !wingspanValue ? "" : `${wingspanValue}"`;
       const normalizedBlockTouch =
         isCoachSubmit || isAdminSubmit || !blockValue ? "" : `${blockValue}"`;
       const normalizedStandingTouch =
@@ -433,8 +464,11 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
           username: formData.username.toLowerCase().trim(),
           photoURL,
           height: normalizedHeight,
+          parentHeight: normalizedParentHeight,
           vertical: normalizedVertical,
           weight: normalizedWeight,
+          wingspan: normalizedWingspan,
+          shoeSize: (isCoachSubmit || isAdminSubmit) ? "" : (shoeSize?.toString() || ""),
           userType: formData.userType,
           ageGroup: isAthleteOnly ? formData.ageGroup : "",
           birthMonth: normalizedBirthMonth,
@@ -462,8 +496,11 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
         ...formData,
         photoURL,
         height: normalizedHeight,
+        parentHeight: normalizedParentHeight,
         vertical: normalizedVertical,
         weight: normalizedWeight,
+        wingspan: normalizedWingspan,
+        shoeSize: (isCoachSubmit || isAdminSubmit) ? "" : (shoeSize?.toString() || ""),
         blockTouch: normalizedBlockTouch,
         standingTouch: normalizedStandingTouch,
         spikeTouch: normalizedSpikeTouch,
@@ -489,9 +526,13 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
       setHeightInches(isCoachSubmit || isAdminSubmit ? "" : heightInches);
       setVerticalInches(isCoachSubmit || isAdminSubmit ? "" : verticalInches);
       setWeightLbs(isCoachSubmit || isAdminSubmit ? "" : weightLbs);
+      setParentHeightFeet(isCoachSubmit || isAdminSubmit ? "" : parentHeightFeet);
+      setParentHeightInches(isCoachSubmit || isAdminSubmit ? "" : parentHeightInches);
       setBlockTouch(isCoachSubmit || isAdminSubmit ? "" : blockTouch);
       setStandingTouch(isCoachSubmit || isAdminSubmit ? "" : standingTouch);
       setSpikeTouch(isCoachSubmit || isAdminSubmit ? "" : spikeTouch);
+      setWingspanInches(isCoachSubmit || isAdminSubmit ? "" : wingspanInches);
+      setShoeSize(isCoachSubmit || isAdminSubmit ? "" : shoeSize);
       setPhotoPreview(null);
       setPhotoFile(null);
       
@@ -1135,6 +1176,75 @@ export default function ProfileForm({ onSave }: ProfileFormProps) {
             className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 resize-none"
           />
           <p className="mt-1.5 text-xs text-[#6B7280]">{formData.bio.length}/500 characters</p>
+
+          {/* Additional Optional Athlete Categories */}
+          {isAthleteOnly && (
+            <div className="mt-4">
+              <label className="mb-1.5 block text-xs font-medium text-[#111827]">Additional (optional)</label>
+              <div className="grid grid-cols-1 sm:flex sm:items-end sm:gap-4">
+                {/* Tallest Parent Height - flexible */}
+                <div className="sm:flex-1">
+                  <label className="mb-1 block text-xs text-[#374151]">Tallest Parent Height</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min={4}
+                        max={7}
+                        value={parentHeightFeet}
+                        onChange={(e) => setParentHeightFeet(e.target.value)}
+                        placeholder="Feet"
+                        className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 pr-12 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+                      />
+                      <span className="absolute inset-y-0 right-4 flex items-center text-xs text-[#6B7280]">ft</span>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min={0}
+                        max={11}
+                        value={parentHeightInches}
+                        onChange={(e) => setParentHeightInches(e.target.value)}
+                        placeholder="Inches"
+                        className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 pr-12 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+                      />
+                      <span className="absolute inset-y-0 right-4 flex items-center text-xs text-[#6B7280]">in</span>
+                    </div>
+                  </div>
+                </div>
+                {/* Wingspan */}
+                <div className="sm:w-32">
+                  <label className="mb-1 block text-xs text-[#374151]">Wingspan</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min={40}
+                      max={120}
+                      value={wingspanInches}
+                      onChange={(e) => setWingspanInches(e.target.value)}
+                      placeholder="Inches"
+                      className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 pr-12 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+                    />
+                    <span className="absolute inset-y-0 right-4 flex items-center text-xs text-[#6B7280]">in</span>
+                  </div>
+                </div>
+                {/* Shoe Size */}
+                <div className="sm:w-28">
+                  <label className="mb-1 block text-xs text-[#374151]">Shoe Size</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    step="0.5"
+                    value={shoeSize}
+                    onChange={(e) => setShoeSize(e.target.value)}
+                    placeholder="US"
+                    className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm text-[#111827] transition-all duration-200 focus:border-[#007AFF] focus:outline-none focus:ring-2 focus:ring-[#007AFF]/20 touch-manipulation"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       ) : isCoach ? (
         <div>

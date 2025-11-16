@@ -233,12 +233,52 @@ export default function PointsPage() {
           )}
 
           {user && isComplete && (
-            <div className="flex items-center gap-4 mt-4">
-              <div className="rounded-2xl bg-gradient-to-br from-[#3B82F6] to-[#2563EB] px-6 py-4 text-white">
-                <p className="text-sm font-medium opacity-90 mb-1">Your Points</p>
-                <p className="text-3xl font-bold">{userPoints.toLocaleString()}</p>
-                {userRank && (
-                  <p className="text-sm font-medium opacity-90 mt-1">Rank #{userRank}</p>
+            <div className="mt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch">
+                {/* Your Points */}
+                <div className="rounded-3xl bg-gradient-to-br from-[#1D4ED8] via-[#2563EB] to-[#38BDF8] px-6 py-5 text-white shadow-xl ring-2 ring-white/20 relative overflow-hidden flex flex-col items-center justify-center text-center">
+                  <div className="absolute -right-6 -top-6 w-24 h-24 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] opacity-90 mb-1">
+                    Your Points
+                  </p>
+                  <p className="text-5xl sm:text-6xl font-extrabold drop-shadow-sm">
+                    {userPoints.toLocaleString()}
+                  </p>
+                  {userRank && (
+                    <p className="text-base sm:text-lg font-semibold opacity-95 mt-1">
+                      Rank #{userRank}
+                    </p>
+                  )}
+                </div>
+                
+                {/* Top 3 Preview */}
+                {topThree.length > 0 && (
+                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Trophy className="w-4 h-4 text-[#F59E0B]" />
+                        <p className="text-sm font-semibold text-[#0F172A]">Top 3</p>
+                      </div>
+                      <Link href="#leaderboard" className="text-xs text-[#3B82F6] font-medium hover:underline">
+                        View all
+                      </Link>
+                    </div>
+                    <div className="space-y-2">
+                      {topThree.map((entry) => (
+                        <Link key={entry.id} href={`/profile/${entry.id}`}>
+                          <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer">
+                            <div className="w-8 text-center">
+                              <span className="text-base">{getRankEmoji(entry.rank)}</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-[#0F172A] truncate">{entry.name}</p>
+                              <p className="text-xs text-[#64748B] truncate">{entry.points.toLocaleString()} pts</p>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
@@ -256,6 +296,36 @@ export default function PointsPage() {
             <p>
               Earn points by engaging with the LockerLink community! Points reset daily at midnight EST, so stay active to climb the leaderboard.
             </p>
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <p className="text-sm text-amber-800">
+                🎁 The top three on the leaderboard will receive prizes worth up to <span className="font-semibold">$250</span>.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="font-semibold text-[#0F172A]">Possible Prizes</h3>
+              <ul className="list-disc pl-5 space-y-1 text-sm">
+                <li>
+                  <span className="font-medium">Mikasa V200W Official Game Ball</span> ($120–$150) — Olympic and VNL game ball; premium, pro-level feel.
+                </li>
+                <li>
+                  <span className="font-medium">Mizuno Wave Momentum 2 or Asics Sky Elite Shoes</span> ($160–$220) — top-tier volleyball shoes for maximum performance.
+                </li>
+                <li>
+                  <span className="font-medium">Apple AirPods</span> — everyday essential to lock in before games.
+                </li>
+              </ul>
+              <p className="text-xs text-slate-500">Examples only; actual prizes may vary by availability.</p>
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <h3 className="font-semibold text-[#0F172A]">Contest Rules</h3>
+              <ul className="list-disc pl-5 space-y-1 text-sm">
+                <li>The points contest runs for one month.</li>
+                <li>To be prize-eligible, you must recommend LockerLink to your friends.</li>
+                <li>Prizes will be awarded only if the platform reaches at least 50 total highlights and at least 50 users appear on the points leaderboard during the contest period.</li>
+              </ul>
+            </div>
 
             <div className="space-y-3">
               <h3 className="font-semibold text-[#0F172A]">Ways to Earn Points:</h3>
@@ -318,6 +388,7 @@ export default function PointsPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm"
+          id="leaderboard"
         >
           <div className="flex items-center gap-3 mb-6">
             <Trophy className="w-6 h-6 text-[#F59E0B]" />

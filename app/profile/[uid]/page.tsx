@@ -283,10 +283,13 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
   const isAdminProfile = profile?.userType === "admin";
   const isMentorProfile = profile?.userType === "mentor";
   const isAthleteProfile = profile?.userType === "athlete" || profile?.userType === "mentor";
-  const derivedAge = calculateAge(profile.birthMonth, profile.birthYear);
+  const formattedBirth =
+    profile.birthMonth && profile.birthYear
+      ? `${String(profile.birthMonth).slice(0, 3)} ${profile.birthYear}`
+      : undefined;
   const athleteStatCards = !isCoachProfile && !isMentorProfile
     ? [
-        { label: "Age", value: derivedAge !== undefined ? `${derivedAge}` : "—" },
+        { label: "Birth", value: formattedBirth || "—" },
         { label: "Height", value: formatHeight(profile.height) },
         { label: "Vertical", value: formatVertical(profile.vertical) },
         { label: "Weight", value: formatWeight(profile.weight) },
@@ -315,7 +318,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
     : [];
   const mentorCards = isMentorProfile
     ? [
-        derivedAge !== undefined ? { label: "Age", value: `${derivedAge}` } : null,
+        formattedBirth ? { label: "Birth", value: formattedBirth } : null,
         profile.height ? { label: "Height", value: formatHeight(profile.height) } : null,
         profile.university ? { label: "University", value: profile.university } : null,
         profile.experienceYears ? { label: "Experience", value: `${profile.experienceYears} years` } : null,
