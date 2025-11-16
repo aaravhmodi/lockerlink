@@ -19,7 +19,7 @@ const ROLE_OPTIONS = [
   },
   {
     type: "coach" as const,
-    title: "I'm a Coach",
+    title: "I'm a Coach / Scout",
     subtitle: "Scout talent, share guidance, and support athlete growth.",
     accent: "from-emerald-100 via-white to-lime-200",
     icon: Users,
@@ -198,7 +198,7 @@ export default function RoleSelectPage() {
                     {option.type === "athlete"
                       ? "Athlete Mode"
                       : option.type === "coach"
-                        ? "Coach Mode"
+                        ? "Coach / Scout Mode"
                         : option.type === "mentor"
                           ? "Mentor Mode"
                           : "Admin Mode"}

@@ -338,29 +338,31 @@ export default function HomePage() {
       <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white pb-20 md:pb-0">
         <Navbar />
         <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-0 pb-4 md:py-4 sm:py-8">
-          {/* Points Promo - Top of page */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.08 }}
-            className="mb-6"
-          >
-            <div className="rounded-2xl border border-amber-300 bg-gradient-to-r from-amber-50 via-white to-orange-50 p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-base sm:text-lg font-semibold text-amber-800">🎁 Earn Points & PRIZES</h3>
-                <p className="text-sm text-amber-700 mt-1">
-                  Interacting and using LockerLink can earn you points and PRIZES worth up to $250.
-                </p>
+          {/* Points Promo - Top of page (Athletes only) */}
+          {userProfile?.userType === "athlete" && (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.08 }}
+              className="mb-6"
+            >
+              <div className="rounded-2xl border border-amber-300 bg-gradient-to-r from-amber-50 via-white to-orange-50 p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-base sm:text-lg font-semibold text-amber-800">🎁 Earn Points & PRIZES</h3>
+                  <p className="text-sm text-amber-700 mt-1">
+                    Interacting and using LockerLink can earn you points and PRIZES worth up to $250.
+                  </p>
+                </div>
+                <Link
+                  href="/profile/points"
+                  className="inline-flex items-center gap-2 justify-center rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold px-4 py-2 shadow-lg ring-1 ring-amber-300/50 hover:from-amber-600 hover:to-orange-600 hover:shadow-amber-200/60 active:translate-y-[1px] transition-all"
+                >
+                  <span>Learn more</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
               </div>
-              <Link
-                href="/profile/points"
-                className="inline-flex items-center gap-2 justify-center rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold px-4 py-2 shadow-lg ring-1 ring-amber-300/50 hover:from-amber-600 hover:to-orange-600 hover:shadow-amber-200/60 active:translate-y-[1px] transition-all"
-              >
-                <span>Learn more</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
-          </motion.div>
+            </motion.div>
+          )}
           {/* About section */}
           <motion.div
             initial={{ opacity: 0, y: 15 }}
@@ -378,8 +380,8 @@ export default function HomePage() {
               const persona = isCoach
                 ? {
                     emoji: "🧢",
-                    title: "Coach View",
-                    intro: "Use LockerLink to share knowledge and support athlete growth.",
+                  title: "Coach / Scout View",
+                  intro: "Use LockerLink to scout talent, share knowledge, and support athlete growth.",
                     accent: "from-emerald-50 via-white to-amber-50",
                     bullets: [
                       {
