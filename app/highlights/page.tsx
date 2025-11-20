@@ -11,6 +11,7 @@ import { Trophy, Clock, Upload, Flame, Star, ArrowLeft, Play, Heart } from "luci
 import Image from "next/image";
 import Link from "next/link";
 import { uploadImageToCloudinary, uploadVideoToCloudinary } from "@/utils/uploadToCloudinary";
+import { formatTimeAgo } from "@/utils/formatTime";
 
 interface Highlight {
   id: string;
@@ -443,6 +444,9 @@ export default function HighlightsPage() {
                     <div className="flex-1 min-w-0">
                       <h4 className="text-[#0F172A] truncate mb-1 font-semibold">{highlight.title}</h4>
                       <p className="text-slate-500 text-sm mb-2">by {highlight.userName || "Anonymous"}</p>
+                      {highlight.createdAt && (
+                        <p className="text-xs text-slate-400 mb-2">{formatTimeAgo(highlight.createdAt)}</p>
+                      )}
                       <div className="flex items-center gap-2">
                         <div className="bg-blue-50 text-[#3B82F6] px-2 py-1 rounded-md text-xs font-medium">
                           {highlight.upvotes.toLocaleString()} {highlight.upvotes === 1 ? "like" : "likes"}

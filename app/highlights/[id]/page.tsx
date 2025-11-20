@@ -25,6 +25,7 @@ import { ArrowLeft, Heart, MessageCircle, Share2, Play, Trophy } from "lucide-re
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { formatTimeAgo } from "@/utils/formatTime";
 
 interface Highlight {
   id: string;
@@ -462,6 +463,9 @@ export default function HighlightViewerPage({ params }: { params: Promise<{ id: 
                   </span>
                 )}
               </div>
+              {highlight.createdAt && (
+                <p className="text-sm text-slate-500 mb-2">{formatTimeAgo(highlight.createdAt)}</p>
+              )}
               {highlight.description && (
                 <p className="text-slate-700 leading-relaxed">{highlight.description}</p>
               )}

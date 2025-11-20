@@ -22,6 +22,7 @@ interface PlayerSummary {
   vertical?: string;
   weight?: string;
   city?: string;
+  userType?: "athlete" | "mentor" | "coach" | "admin";
 }
 
 export default function CoachDashboardPage() {
@@ -31,6 +32,7 @@ export default function CoachDashboardPage() {
   const [isAdminView, setIsAdminView] = useState(false);
   const [players, setPlayers] = useState<PlayerSummary[]>([]);
   const [loadingPlayers, setLoadingPlayers] = useState(true);
+  const [selectedFilter, setSelectedFilter] = useState<"athlete" | "mentor" | "coach" | "admin" | null>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -56,7 +58,7 @@ export default function CoachDashboardPage() {
 
       const playersQuery = query(
         collection(db, "users"),
-        where("userType", "in", ["athlete", "player"])
+        where("userType", "in", ["athlete", "mentor", "coach", "admin"])
       );
 
       unsubscribePlayers = onSnapshot(
@@ -126,15 +128,23 @@ export default function CoachDashboardPage() {
           </div>
 
           <section className="mb-10">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-xl font-semibold text-[#0F172A]">
-                  {isAdminView ? "Recent Highlights" : "Highlights"}
+                  {selectedFilter === null
+                    ? `All Accounts (${players.length})`
+                    : selectedFilter === "athlete"
+                      ? `Athletes (${players.filter((p) => p.userType === "athlete").length})`
+                      : selectedFilter === "mentor"
+                        ? `Mentors (${players.filter((p) => p.userType === "mentor").length})`
+                        : selectedFilter === "coach"
+                          ? `Coaches / Scouts (${players.filter((p) => p.userType === "coach").length})`
+                          : `Parents / Admins (${players.filter((p) => p.userType === "admin").length})`}
                 </h2>
                 <p className="text-sm text-[#64748B]">
-                  {isAdminView
-                    ? "See what your athletes are sharing so you can celebrate wins and track progress."
-                    : "Browse clips from athletes across LockerLink."}
+                  {selectedFilter === null
+                    ? "Browse all accounts on LockerLink."
+                    : `Showing ${selectedFilter === "athlete" ? "athletes" : selectedFilter === "mentor" ? "mentors" : selectedFilter === "coach" ? "coaches / scouts" : "parents / admins"} on LockerLink.`}
                 </p>
               </div>
               <Link
@@ -145,47 +155,175 @@ export default function CoachDashboardPage() {
               </Link>
             </div>
 
+            {/* Filter Tiles */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+              <motion.button
+                onClick={() => setSelectedFilter(null)}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className={`rounded-xl border-2 p-4 text-left transition-all ${
+                  selectedFilter === null
+                    ? "border-[#3B82F6] bg-blue-50 shadow-md"
+                    : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-[#64748B] uppercase tracking-wide">All</span>
+                </div>
+                <p className="text-2xl font-bold text-[#0F172A]">{players.length}</p>
+                <p className="text-xs text-[#64748B] mt-1">accounts</p>
+              </motion.button>
+
+              <motion.button
+                onClick={() => setSelectedFilter("athlete")}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className={`rounded-xl border-2 p-4 text-left transition-all ${
+                  selectedFilter === "athlete"
+                    ? "border-blue-300 bg-blue-50 shadow-md"
+                    : "border-slate-200 bg-white hover:border-blue-200 hover:shadow-sm"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Athletes</span>
+                </div>
+                <p className="text-2xl font-bold text-[#0F172A]">
+                  {players.filter((p) => p.userType === "athlete").length}
+                </p>
+                <p className="text-xs text-[#64748B] mt-1">accounts</p>
+              </motion.button>
+
+              <motion.button
+                onClick={() => setSelectedFilter("mentor")}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className={`rounded-xl border-2 p-4 text-left transition-all ${
+                  selectedFilter === "mentor"
+                    ? "border-purple-300 bg-purple-50 shadow-md"
+                    : "border-slate-200 bg-white hover:border-purple-200 hover:shadow-sm"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-purple-600 uppercase tracking-wide">Mentors</span>
+                </div>
+                <p className="text-2xl font-bold text-[#0F172A]">
+                  {players.filter((p) => p.userType === "mentor").length}
+                </p>
+                <p className="text-xs text-[#64748B] mt-1">accounts</p>
+              </motion.button>
+
+              <motion.button
+                onClick={() => setSelectedFilter("coach")}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className={`rounded-xl border-2 p-4 text-left transition-all ${
+                  selectedFilter === "coach"
+                    ? "border-emerald-300 bg-emerald-50 shadow-md"
+                    : "border-slate-200 bg-white hover:border-emerald-200 hover:shadow-sm"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wide">Coaches</span>
+                </div>
+                <p className="text-2xl font-bold text-[#0F172A]">
+                  {players.filter((p) => p.userType === "coach").length}
+                </p>
+                <p className="text-xs text-[#64748B] mt-1">accounts</p>
+              </motion.button>
+
+              <motion.button
+                onClick={() => setSelectedFilter("admin")}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className={`rounded-xl border-2 p-4 text-left transition-all ${
+                  selectedFilter === "admin"
+                    ? "border-amber-300 bg-amber-50 shadow-md"
+                    : "border-slate-200 bg-white hover:border-amber-200 hover:shadow-sm"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-amber-600 uppercase tracking-wide">Parents</span>
+                </div>
+                <p className="text-2xl font-bold text-[#0F172A]">
+                  {players.filter((p) => p.userType === "admin").length}
+                </p>
+                <p className="text-xs text-[#64748B] mt-1">accounts</p>
+              </motion.button>
+            </div>
+
             {loadingPlayers ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[1, 2, 3, 4].map((key) => (
                   <div key={key} className="h-32 rounded-2xl bg-slate-100 animate-pulse" />
                 ))}
               </div>
-            ) : players.length === 0 ? (
-              <div className="rounded-2xl border border-[#E2E8F0] bg-white px-6 py-10 text-center text-[#475569]">
-                No athletes found yet. Encourage players to complete their profiles so you can discover them here.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {players.map((player) => (
-                  <motion.div
-                    key={player.id}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="h-14 w-14 rounded-full bg-gradient-to-br from-[#3B82F6] to-[#2563EB] flex items-center justify-center text-white text-lg font-semibold overflow-hidden">
-                        {player.photoURL ? (
-                          <Image
-                            src={player.photoURL}
-                            alt={player.name || "Athlete"}
-                            width={56}
-                            height={56}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <span>{player.name?.[0]?.toUpperCase() || "A"}</span>
-                        )}
+            ) : (() => {
+              const filteredPlayers =
+                selectedFilter === null
+                  ? players
+                  : players.filter((p) => p.userType === selectedFilter);
+
+              if (filteredPlayers.length === 0) {
+                return (
+                  <div className="rounded-2xl border border-[#E2E8F0] bg-white px-6 py-10 text-center text-[#475569]">
+                    No {selectedFilter === null ? "accounts" : selectedFilter === "athlete" ? "athletes" : selectedFilter === "mentor" ? "mentors" : selectedFilter === "coach" ? "coaches / scouts" : "parents / admins"} found yet.
+                  </div>
+                );
+              }
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {filteredPlayers.map((player) => {
+                  const getUserTypeLabel = (type?: string) => {
+                    if (type === "athlete") return "Athlete";
+                    if (type === "mentor") return "Mentor";
+                    if (type === "coach") return "Coach / Scout";
+                    return "User";
+                  };
+
+                  const getUserTypeBadge = (type?: string) => {
+                    if (type === "athlete") return "bg-blue-50 text-blue-700 border-blue-200";
+                    if (type === "mentor") return "bg-purple-50 text-purple-700 border-purple-200";
+                    if (type === "coach") return "bg-emerald-50 text-emerald-700 border-emerald-200";
+                    return "bg-slate-50 text-slate-700 border-slate-200";
+                  };
+
+                  return (
+                    <motion.div
+                      key={player.id}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className="h-14 w-14 rounded-full bg-gradient-to-br from-[#3B82F6] to-[#2563EB] flex items-center justify-center text-white text-lg font-semibold overflow-hidden">
+                          {player.photoURL ? (
+                            <Image
+                              src={player.photoURL}
+                              alt={player.name || "User"}
+                              width={56}
+                              height={56}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <span>{player.name?.[0]?.toUpperCase() || "U"}</span>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-lg font-semibold text-[#0F172A] truncate">
+                              {player.name || "Unnamed User"}
+                            </h3>
+                            {player.userType && (
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${getUserTypeBadge(player.userType)}`}>
+                                {getUserTypeLabel(player.userType)}
+                              </span>
+                            )}
+                          </div>
+                          {player.club && <p className="text-sm text-[#64748B]">{player.club}</p>}
+                          {player.city && <p className="text-xs text-[#94A3B8] mt-1">{player.city}</p>}
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <h3 className="text-lg font-semibold text-[#0F172A] truncate">
-                          {player.name || "Unnamed Athlete"}
-                        </h3>
-                        {player.club && <p className="text-sm text-[#64748B]">{player.club}</p>}
-                        {player.city && <p className="text-xs text-[#94A3B8] mt-1">{player.city}</p>}
-                      </div>
-                    </div>
 
                     <div className="flex flex-wrap items-center gap-2 text-xs text-[#475569] mb-4">
                       {player.position && (
@@ -225,9 +363,11 @@ export default function CoachDashboardPage() {
                       </Link>
                     </div>
                   </motion.div>
-                ))}
-              </div>
-            )}
+                  );
+                })}
+                </div>
+              );
+            })()}
           </section>
 
           {isAdminView ? (

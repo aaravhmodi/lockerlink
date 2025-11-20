@@ -31,6 +31,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { uploadImageToCloudinary, uploadVideoToCloudinary } from "@/utils/uploadToCloudinary";
 import { formatHeight, formatVertical, formatWeight, formatTouch } from "@/utils/formatMetrics";
+import { formatTimeAgo } from "@/utils/formatTime";
 import FeedCard from "@/components/FeedCard";
 import ManagePostsModal from "@/components/ManagePostsModal";
 import BackButton from "@/components/BackButton";
@@ -1409,6 +1410,13 @@ export default function ProfilePage() {
                       {/* Overlay */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                       
+                      {/* Time ago indicator */}
+                      {highlight.createdAt && (
+                        <div className="absolute top-2 left-2 text-white text-[10px] bg-black/50 backdrop-blur-sm px-2 py-1 rounded-md">
+                          {formatTimeAgo(highlight.createdAt)}
+                        </div>
+                      )}
+                      
                       {/* Play button on hover */}
                       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center">
@@ -1418,7 +1426,7 @@ export default function ProfilePage() {
                       
                       {/* View count */}
                       {highlight.views && highlight.views > 0 && (
-                        <div className="absolute bottom-2 left-2 text-white text-xs bg-black/50 backdrop-blur-sm px-2 py-1 rounded-md">
+                        <div className="absolute bottom-2 right-2 text-white text-xs bg-black/50 backdrop-blur-sm px-2 py-1 rounded-md">
                           {highlight.views >= 1000 
                             ? `${(highlight.views / 1000).toFixed(1)}k` 
                             : highlight.views.toString()}

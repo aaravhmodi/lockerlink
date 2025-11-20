@@ -14,6 +14,7 @@ import Link from "next/link";
 import FeedCard from "@/components/FeedCard";
 import PostComposer from "@/components/PostComposer";
 import ManagePostsModal from "@/components/ManagePostsModal";
+import { formatTimeAgo } from "@/utils/formatTime";
 
 interface UserProfile {
   name: string;
@@ -46,6 +47,7 @@ interface Highlight {
   rank: number;
   thumbnailURL?: string;
   commentsCount?: number;
+  createdAt?: number;
 }
 
 interface Challenge {
@@ -199,6 +201,7 @@ export default function HomePage() {
           commentsCount: data.commentsCount || 0,
           rank: index + 1,
           thumbnailURL: data.thumbnailURL || "",
+          createdAt: data.createdAt?.toMillis?.() || data.createdAt || Date.now(),
         } as Highlight;
       });
       const highlightsData = await Promise.all(highlightsDataPromises);
@@ -808,6 +811,9 @@ export default function HomePage() {
                         <h3 className="text-sm font-semibold text-[#0F172A] leading-tight">
                           {highlight.title || "Highlight"}
                         </h3>
+                        {highlight.createdAt && (
+                          <p className="text-xs text-slate-400">{formatTimeAgo(highlight.createdAt)}</p>
+                        )}
                         <div className="flex items-center gap-4 text-xs text-slate-500">
                           <span className="flex items-center gap-1">
                             <Heart className="w-3 h-3" />

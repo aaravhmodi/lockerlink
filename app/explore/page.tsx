@@ -15,6 +15,7 @@ import { motion } from "framer-motion";
 import { HiSearch } from "react-icons/hi";
 import { Heart, MessageCircle, Play } from "lucide-react";
 import BackButton from "@/components/BackButton";
+import { formatTimeAgo } from "@/utils/formatTime";
 
 interface User {
   id: string;
@@ -40,6 +41,7 @@ interface Highlight {
   upvotes: number;
   likedBy?: string[];
   commentsCount?: number;
+  createdAt?: number;
 }
 
 interface Post {
@@ -126,6 +128,7 @@ export default function ExplorePage() {
           upvotes: data.upvotes || 0,
           likedBy: data.likedBy || [],
           commentsCount: data.commentsCount || 0,
+          createdAt: data.createdAt?.toMillis?.() || data.createdAt || Date.now(),
         } as Highlight;
       });
       const highlightData = await Promise.all(highlightDataPromises);
@@ -403,6 +406,9 @@ export default function ExplorePage() {
                           </div>
                         </Link>
                       </div>
+                      {highlight.createdAt && (
+                        <p className="text-xs text-[#9CA3AF] mb-3">{formatTimeAgo(highlight.createdAt)}</p>
+                      )}
                       <div className="mt-auto flex items-center justify-between">
                         <button
                           onClick={() => handleHighlightLike(highlight)}

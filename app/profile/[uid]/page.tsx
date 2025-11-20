@@ -13,6 +13,7 @@ import { motion } from "framer-motion";
 import { HiChat } from "react-icons/hi";
 import { Play } from "lucide-react";
 import { formatHeight, formatVertical, formatWeight, formatTouch } from "@/utils/formatMetrics";
+import { formatTimeAgo } from "@/utils/formatTime";
 import BackButton from "@/components/BackButton";
 
 const MONTH_TO_INDEX: Record<string, number> = {
@@ -451,7 +452,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
                 </div>
               )}
 
-              {!isCoachProfile && !isMentorProfile && athleteStatCards.length > 0 && (
+              {!isCoachProfile && !isMentorProfile && !isAdminProfile && athleteStatCards.length > 0 && (
                 <div className="grid grid-cols-2 gap-3 sm:gap-4">
                   {athleteStatCards.map((card) => (
                     <div key={card.label} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center">
@@ -499,7 +500,7 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
                   ))}
                 </div>
               )}
-              {!isCoachProfile && !isMentorProfile && profile.bio && (
+              {!isCoachProfile && !isMentorProfile && !isAdminProfile && profile.bio && (
                 <div className="pt-6 border-t border-[#E5E7EB]">
                   <p className="text-sm font-semibold text-[#6B7280] uppercase tracking-wide mb-3">About</p>
                   <p className="text-[#111827] leading-relaxed">{profile.bio}</p>
@@ -551,60 +552,67 @@ export default function UserProfilePage({ params }: { params: Promise<{ uid: str
                 </div>
               )}
 
-              <div className="pt-6 border-t border-[#E5E7EB]">
-                <div className="flex items-center justify-between mb-4 sm:mb-6">
-                  <h2 className="text-xl sm:text-2xl font-semibold text-[#111827]">Highlights</h2>
-                  {!isOwnProfile && highlights.length > 0 && (
-                    <span className="text-xs text-slate-500">Latest {Math.min(highlights.length, 6)} clips</span>
+              {!isAdminProfile && (
+                <div className="pt-6 border-t border-[#E5E7EB]">
+                  <div className="flex items-center justify-between mb-4 sm:mb-6">
+                    <h2 className="text-xl sm:text-2xl font-semibold text-[#111827]">Highlights</h2>
+                    {!isOwnProfile && highlights.length > 0 && (
+                      <span className="text-xs text-slate-500">Latest {Math.min(highlights.length, 6)} clips</span>
+                    )}
+                  </div>
+                  {highlights.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                      {highlights.slice(0, 6).map((highlight) => (
+                        <Link
+                          key={highlight.id}
+                          href={{
+                            pathname: `/highlights/${highlight.id}`,
+                            query: { returnUrl: `/profile/${uid}` },
+                          }}
+                        >
+                          <motion.div
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="group relative aspect-[4/5] overflow-hidden rounded-2xl bg-slate-100 border border-slate-200 shadow-sm"
+                          >
+                            {highlight.thumbnailURL ? (
+                              <Image
+                                src={highlight.thumbnailURL}
+                                alt={highlight.title || "Highlight"}
+                                fill
+                                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-300">
+                                <Play className="w-8 h-8 text-slate-500" />
+                              </div>
+                            )}
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover:opacity-100">
+                              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90">
+                                <Play className="w-6 h-6 text-[#3B82F6] ml-0.5" />
+                              </div>
+                            </div>
+                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-3">
+                              <p className="text-xs font-semibold text-white line-clamp-2 mb-1">
+                                {highlight.title || "Highlight"}
+                              </p>
+                              {highlight.createdAt && (
+                                <p className="text-[10px] text-white/80">
+                                  {formatTimeAgo(highlight.createdAt)}
+                                </p>
+                              )}
+                            </div>
+                          </motion.div>
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-slate-600">
+                      No highlights yet. When they upload clips, you'll find them here.
+                    </div>
                   )}
                 </div>
-                {highlights.length > 0 ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-                    {highlights.slice(0, 6).map((highlight) => (
-                      <Link
-                        key={highlight.id}
-                        href={{
-                          pathname: `/highlights/${highlight.id}`,
-                          query: { returnUrl: `/profile/${uid}` },
-                        }}
-                      >
-                        <motion.div
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          className="group relative aspect-[4/5] overflow-hidden rounded-2xl bg-slate-100 border border-slate-200 shadow-sm"
-                        >
-                          {highlight.thumbnailURL ? (
-                            <Image
-                              src={highlight.thumbnailURL}
-                              alt={highlight.title || "Highlight"}
-                              fill
-                              className="object-cover transition-transform duration-300 group-hover:scale-105"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-300">
-                              <Play className="w-8 h-8 text-slate-500" />
-                            </div>
-                          )}
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover:opacity-100">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90">
-                              <Play className="w-6 h-6 text-[#3B82F6] ml-0.5" />
-                            </div>
-                          </div>
-                          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-3">
-                            <p className="text-xs font-semibold text-white line-clamp-2">
-                              {highlight.title || "Highlight"}
-                            </p>
-                          </div>
-                        </motion.div>
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-slate-600">
-                    No highlights yet. When they upload clips, you’ll find them here.
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           </div>
         </motion.div>
