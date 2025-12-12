@@ -18,28 +18,7 @@ export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const [showMenu, setShowMenu] = useState(false);
-  const [showProfileReminder, setShowProfileReminder] = useState(false);
   const [userType, setUserType] = useState<"athlete" | "coach" | "admin" | "mentor" | "">("");
-  const reminderTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const triggerProfileReminder = () => {
-    if (reminderTimeoutRef.current) {
-      clearTimeout(reminderTimeoutRef.current);
-    }
-
-    setShowProfileReminder(true);
-    reminderTimeoutRef.current = setTimeout(() => {
-      setShowProfileReminder(false);
-    }, 4000);
-  };
-
-  useEffect(() => {
-    return () => {
-      if (reminderTimeoutRef.current) {
-        clearTimeout(reminderTimeoutRef.current);
-      }
-    };
-  }, []);
 
   useEffect(() => {
     if (!user) {
@@ -61,11 +40,6 @@ export default function Navbar() {
     return () => unsub();
   }, [user]);
 
-  useEffect(() => {
-    if (isComplete) {
-      setShowProfileReminder(false);
-    }
-  }, [isComplete]);
 
   const handleProtectedNavigation = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
     if (isCoach && href === "/messages") {
@@ -74,18 +48,7 @@ export default function Navbar() {
       setShowMenu(false);
       return;
     }
-
-    // Allow access to profile/points page
-    if (href.startsWith("/profile/points")) {
-      return;
-    }
-
-    if (!profileLoading && !isComplete && href !== "/profile") {
-      event.preventDefault();
-      triggerProfileReminder();
-      setShowMenu(false);
-      router.push("/profile");
-    }
+    // Allow all navigation - no profile blocking
   };
 
   const handleSignOut = async () => {
@@ -260,32 +223,6 @@ export default function Navbar() {
         )}
       </div>
 
-      {/* Profile completion reminder */}
-      {!profileLoading && !isComplete && showProfileReminder && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          className="fixed left-1/2 z-[60] -translate-x-1/2 top-16 md:top-20 px-4"
-        >
-          <div className="flex items-center gap-3 rounded-2xl bg-[#0F172A] text-white px-4 py-3 shadow-2xl border border-[#1E293B]/40">
-            <HiInformationCircle className="h-5 w-5 text-[#60A5FA]" />
-            <div className="text-sm font-medium">
-              Complete your profile to unlock the rest of LockerLink.
-            </div>
-            <button
-              onClick={() => {
-                setShowProfileReminder(false);
-                setShowMenu(false);
-                router.push("/profile");
-              }}
-              className="ml-2 rounded-xl bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide hover:bg-white/25 transition-colors"
-            >
-              Complete now
-            </button>
-          </div>
-        </motion.div>
-      )}
 
       {/* Spacer for mobile bottom nav */}
       <div className="md:hidden h-16" />

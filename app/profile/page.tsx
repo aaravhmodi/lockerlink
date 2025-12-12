@@ -931,35 +931,6 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {profileFieldsComplete && !hasHighlight && (isAthleteProfile || isMentorProfile) && !isComplete && (
-        <div className="max-w-2xl mx-auto px-4 pt-4">
-          <div className="flex flex-col gap-3 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-amber-100 px-5 py-4 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 flex items-center justify-center rounded-full bg-amber-400 text-white">
-                <Play className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-[#92400E]">Almost there!</h3>
-                <p className="text-xs text-[#B45309]">
-                  Upload a highlight clip (even a quick 5-second video) to finish unlocking the rest of LockerLink.
-                </p>
-              </div>
-            </div>
-            <div>
-              <button
-                onClick={() => {
-                  setSubmitHighlightToChallenge(false);
-                  setShowUploadModal(true);
-                }}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#F59E0B] px-4 py-2 text-xs font-semibold text-white shadow hover:bg-[#d97706] transition-colors"
-              >
-                Upload Highlight
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Profile banner */}
       <div className="bg-gradient-to-br from-[#3B82F6] to-[#2563EB] h-32" />
 

@@ -351,9 +351,9 @@ export default function HomePage() {
             >
               <div className="rounded-2xl border border-amber-300 bg-gradient-to-r from-amber-50 via-white to-orange-50 p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                  <h3 className="text-base sm:text-lg font-semibold text-amber-800">🎁 Earn Points & PRIZES</h3>
+                  <h3 className="text-base sm:text-lg font-semibold text-amber-800">🎁 Earn Points & <span className="font-extrabold text-xl">PRIZES</span></h3>
                   <p className="text-sm text-amber-700 mt-1">
-                    Interacting and using LockerLink can earn you points and PRIZES worth up to $250.
+                    Interacting and using LockerLink can earn you points and <span className="font-bold text-base">PRIZES</span> worth up to <span className="font-extrabold text-xl text-amber-900">$250</span>.
                   </p>
                 </div>
                 <Link

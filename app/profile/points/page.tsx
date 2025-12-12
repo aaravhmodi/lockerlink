@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
-import { useProfileComplete } from "@/hooks/useProfileComplete";
 import { collection, query, orderBy, limit, getDocs, doc, getDoc, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Navbar from "@/components/Navbar";
@@ -24,7 +23,6 @@ interface LeaderboardEntry {
 
 export default function PointsPage() {
   const { user, loading: userLoading } = useUser();
-  const { isComplete, loading: profileLoading } = useProfileComplete();
   const router = useRouter();
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -178,61 +176,7 @@ export default function PointsPage() {
         <div className="mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold text-[#0F172A] mb-2">Points System</h1>
           
-          {/* Profile Incomplete Notification */}
-          {!profileLoading && !isComplete && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 mb-4"
-            >
-              <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <h3 className="text-sm font-semibold text-amber-900 mb-1">Complete Your Profile to Start Earning Points</h3>
-                  <p className="text-sm text-amber-700 mb-3">
-                    You need to complete your profile to start earning and tracking points. Finish your profile setup to unlock the points system.
-                  </p>
-                  <Link
-                    href="/profile"
-                    className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 transition-colors"
-                  >
-                    Complete Profile
-                  </Link>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Highlight Video Required Notification */}
-          {!checkingHighlight && !profileLoading && 
-           (userType === "athlete" || userType === "mentor") && 
-           !hasHighlight && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 mb-4"
-            >
-              <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <h3 className="text-sm font-semibold text-red-900 mb-1">Upload a Highlight Video to Start Earning Points</h3>
-                  <p className="text-sm text-red-700 mb-3">
-                    {userType === "athlete" 
-                      ? "Athletes must upload at least one highlight video before they can start earning points. Upload a highlight to unlock the points system."
-                      : "Mentors must upload at least one highlight video before they can start earning points. Upload a highlight to unlock the points system."}
-                  </p>
-                  <Link
-                    href="/profile"
-                    className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors"
-                  >
-                    Upload Highlight
-                  </Link>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {user && isComplete && (
+          {user && (
             <div className="mt-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch">
                 {/* Your Points */}
@@ -298,21 +242,21 @@ export default function PointsPage() {
             </p>
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
               <p className="text-sm text-amber-800">
-                🎁 The top three on the leaderboard will receive prizes worth up to <span className="font-semibold">$250</span>.
+                🎁 The top three on the leaderboard will receive <span className="font-bold text-base">PRIZES</span> worth up to <span className="font-extrabold text-xl text-amber-900">$250</span>.
               </p>
             </div>
 
             <div className="space-y-2">
-              <h3 className="font-semibold text-[#0F172A]">Possible Prizes</h3>
+              <h3 className="font-bold text-lg text-[#0F172A]">🎁 Possible Prizes</h3>
               <ul className="list-disc pl-5 space-y-1 text-sm">
                 <li>
-                  <span className="font-medium">Mikasa V200W Official Game Ball</span> ($120–$150) — Olympic and VNL game ball; premium, pro-level feel.
+                  <span className="font-semibold">Mikasa V200W Official Game Ball</span> <span className="font-extrabold text-base text-amber-700">($120–$150)</span> — Olympic and VNL game ball; premium, pro-level feel.
                 </li>
                 <li>
-                  <span className="font-medium">Mizuno Wave Momentum 2 or Asics Sky Elite Shoes</span> ($160–$220) — top-tier volleyball shoes for maximum performance.
+                  <span className="font-semibold">Mizuno Wave Momentum 2 or Asics Sky Elite Shoes</span> <span className="font-extrabold text-base text-amber-700">($160–$220)</span> — top-tier volleyball shoes for maximum performance.
                 </li>
                 <li>
-                  <span className="font-medium">Apple AirPods</span> — everyday essential to lock in before games.
+                  <span className="font-semibold">Apple AirPods</span> <span className="font-extrabold text-base text-amber-700">($100–$200)</span> — everyday essential to lock in before games.
                 </li>
               </ul>
               <p className="text-xs text-slate-500">Examples only; actual prizes may vary by availability.</p>
@@ -395,35 +339,7 @@ export default function PointsPage() {
             <h2 className="text-2xl font-semibold text-[#0F172A]">Leaderboard</h2>
           </div>
 
-          {!isComplete ? (
-            <div className="text-center py-12 text-[#64748B]">
-              <AlertCircle className="w-12 h-12 mx-auto mb-4 text-amber-500" />
-              <p className="text-base font-medium mb-2">Complete your profile to view the leaderboard</p>
-              <p className="text-sm mb-4">Finish your profile setup to see how you rank among other players.</p>
-              <Link
-                href="/profile"
-                className="inline-flex items-center gap-2 rounded-xl bg-[#3B82F6] px-6 py-3 text-white font-medium hover:bg-[#2563EB] transition-colors"
-              >
-                Go to Profile
-              </Link>
-            </div>
-          ) : !checkingHighlight && (userType === "athlete" || userType === "mentor") && !hasHighlight ? (
-            <div className="text-center py-12 text-[#64748B]">
-              <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
-              <p className="text-base font-medium mb-2">Upload a highlight video to view the leaderboard</p>
-              <p className="text-sm mb-4">
-                {userType === "athlete" 
-                  ? "Athletes must upload at least one highlight video to see their rank on the leaderboard."
-                  : "Mentors must upload at least one highlight video to see their rank on the leaderboard."}
-              </p>
-              <Link
-                href="/profile"
-                className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-6 py-3 text-white font-medium hover:bg-red-700 transition-colors"
-              >
-                Upload Highlight
-              </Link>
-            </div>
-          ) : loading ? (
+          {loading ? (
             <div className="text-center py-8 text-[#64748B]">Loading leaderboard...</div>
           ) : leaderboard.length === 0 ? (
             <div className="text-center py-8 text-[#64748B]">No users with points yet. Be the first!</div>

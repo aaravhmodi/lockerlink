@@ -90,7 +90,7 @@ export function useProfileComplete() {
         })();
 
         const hasHighlight = !!data.hasHighlight;
-        const needsHighlight = !isCoach && !isAdmin; // Athletes and mentors need highlights
+        const needsHighlight = !isCoach && !isAdmin && !isMentor; // Only athletes need highlights
         const completeStatus = needsHighlight
           ? !!hasRequiredFields && hasHighlight
           : !!hasRequiredFields;
