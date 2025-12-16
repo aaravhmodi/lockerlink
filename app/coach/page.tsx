@@ -68,13 +68,15 @@ export default function CoachDashboardPage() {
   const [selectedAgeMin, setSelectedAgeMin] = useState<string>("");
   const [selectedAgeMax, setSelectedAgeMax] = useState<string>("");
 
-  // Get unique cities and positions for filter dropdowns
+  // Get unique cities and positions for filter dropdowns (only from athletes)
   const uniqueCities = useMemo(() => {
-    return Array.from(new Set(players.map(p => p.city).filter(Boolean))).sort() as string[];
+    const athletes = players.filter(p => p.userType === "athlete");
+    return Array.from(new Set(athletes.map(p => p.city).filter(Boolean))).sort() as string[];
   }, [players]);
 
   const uniquePositions = useMemo(() => {
-    return Array.from(new Set(players.map(p => p.position).filter(Boolean))).sort() as string[];
+    const athletes = players.filter(p => p.userType === "athlete");
+    return Array.from(new Set(athletes.map(p => p.position).filter(Boolean))).sort() as string[];
   }, [players]);
 
   useEffect(() => {
@@ -219,11 +221,12 @@ export default function CoachDashboardPage() {
               </Link>
             </div>
 
-            {/* Metric Filters */}
+            {/* Metric Filters - Only show for Athletes */}
+            {selectedFilter === "athlete" && (
             <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Filter className="w-5 h-5 text-slate-600" />
-                <h3 className="text-lg font-semibold text-[#0F172A]">Filter by Metrics</h3>
+                <h3 className="text-lg font-semibold text-[#0F172A]">Filter Athletes by Metrics</h3>
               </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -414,27 +417,30 @@ export default function CoachDashboardPage() {
                   ? players
                   : players.filter((p) => p.userType === selectedFilter);
 
-              // Filter by city
-              if (selectedCity) {
-                filteredPlayers = filteredPlayers.filter((p) => p.city === selectedCity);
-              }
+              // Only apply metric filters when viewing athletes
+              if (selectedFilter === "athlete") {
+                // Filter by city
+                if (selectedCity) {
+                  filteredPlayers = filteredPlayers.filter((p) => p.city === selectedCity);
+                }
 
-              // Filter by position
-              if (selectedPosition) {
-                filteredPlayers = filteredPlayers.filter((p) => p.position === selectedPosition);
-              }
+                // Filter by position
+                if (selectedPosition) {
+                  filteredPlayers = filteredPlayers.filter((p) => p.position === selectedPosition);
+                }
 
-              // Filter by age range
-              if (selectedAgeMin || selectedAgeMax) {
-                filteredPlayers = filteredPlayers.filter((p) => {
-                  const age = calculateAge(p.birthYear, p.birthMonth);
-                  if (age === null) return false;
-                  
-                  const minAge = selectedAgeMin ? parseInt(selectedAgeMin) : 0;
-                  const maxAge = selectedAgeMax ? parseInt(selectedAgeMax) : 999;
-                  
-                  return age >= minAge && age <= maxAge;
-                });
+                // Filter by age range
+                if (selectedAgeMin || selectedAgeMax) {
+                  filteredPlayers = filteredPlayers.filter((p) => {
+                    const age = calculateAge(p.birthYear, p.birthMonth);
+                    if (age === null) return false;
+                    
+                    const minAge = selectedAgeMin ? parseInt(selectedAgeMin) : 0;
+                    const maxAge = selectedAgeMax ? parseInt(selectedAgeMax) : 999;
+                    
+                    return age >= minAge && age <= maxAge;
+                  });
+                }
               }
 
               if (filteredPlayers.length === 0) {
