@@ -165,6 +165,19 @@ export default function LoginPage() {
         <div className="mb-8 text-center">
           <h1 className="mb-2 text-3xl font-semibold text-[#111827]">LockerLink</h1>
           <p className="text-[#6B7280]">Connect with OVA volleyball players</p>
+          <motion.a
+            href="https://lockerlinkabout.vercel.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#3B82F6] via-[#2563EB] to-[#1D4ED8] px-5 py-2.5 text-sm font-semibold text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:from-[#2563EB] hover:via-[#1D4ED8] hover:to-[#1E40AF]"
+          >
+            <span>Learn About LockerLink</span>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </motion.a>
         </div>
 
         {error && (
