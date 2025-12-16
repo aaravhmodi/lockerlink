@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { collection, doc, getDoc, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -11,6 +11,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import BackButton from "@/components/BackButton";
+import { Filter, X } from "lucide-react";
 
 interface PlayerSummary {
   id: string;
@@ -22,8 +23,35 @@ interface PlayerSummary {
   vertical?: string;
   weight?: string;
   city?: string;
+  birthYear?: string;
+  birthMonth?: string;
   userType?: "athlete" | "mentor" | "coach" | "admin";
 }
+
+// Helper function to calculate age from birthYear and birthMonth
+const calculateAge = (birthYear?: string, birthMonth?: string): number | null => {
+  if (!birthYear) return null;
+  const year = parseInt(birthYear);
+  if (isNaN(year)) return null;
+  
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1; // 1-12
+  
+  let age = currentYear - year;
+  
+  if (birthMonth) {
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const birthMonthNum = monthNames.indexOf(birthMonth) + 1;
+    if (birthMonthNum > 0) {
+      if (currentMonth < birthMonthNum || (currentMonth === birthMonthNum && now.getDate() < 1)) {
+        age--;
+      }
+    }
+  }
+  
+  return age >= 0 ? age : null;
+};
 
 export default function CoachDashboardPage() {
   const { user, loading } = useUser();
@@ -33,6 +61,21 @@ export default function CoachDashboardPage() {
   const [players, setPlayers] = useState<PlayerSummary[]>([]);
   const [loadingPlayers, setLoadingPlayers] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState<"athlete" | "mentor" | "coach" | "admin" | null>(null);
+  
+  // New filter states
+  const [selectedCity, setSelectedCity] = useState<string>("");
+  const [selectedPosition, setSelectedPosition] = useState<string>("");
+  const [selectedAgeMin, setSelectedAgeMin] = useState<string>("");
+  const [selectedAgeMax, setSelectedAgeMax] = useState<string>("");
+
+  // Get unique cities and positions for filter dropdowns
+  const uniqueCities = useMemo(() => {
+    return Array.from(new Set(players.map(p => p.city).filter(Boolean))).sort() as string[];
+  }, [players]);
+
+  const uniquePositions = useMemo(() => {
+    return Array.from(new Set(players.map(p => p.position).filter(Boolean))).sort() as string[];
+  }, [players]);
 
   useEffect(() => {
     if (loading) return;
@@ -70,6 +113,8 @@ export default function CoachDashboardPage() {
               return {
                 ...data,
                 id: docSnap.id,
+                birthYear: data.birthYear,
+                birthMonth: data.birthMonth,
               };
             })
             .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
@@ -131,15 +176,34 @@ export default function CoachDashboardPage() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-xl font-semibold text-[#0F172A]">
-                  {selectedFilter === null
-                    ? `All Accounts (${players.length})`
-                    : selectedFilter === "athlete"
-                      ? `Athletes (${players.filter((p) => p.userType === "athlete").length})`
-                      : selectedFilter === "mentor"
-                        ? `Mentors (${players.filter((p) => p.userType === "mentor").length})`
-                        : selectedFilter === "coach"
-                          ? `Coaches / Scouts (${players.filter((p) => p.userType === "coach").length})`
-                          : `Parents / Admins (${players.filter((p) => p.userType === "admin").length})`}
+                  {(() => {
+                    // Calculate filtered count
+                    let filtered = selectedFilter === null ? players : players.filter((p) => p.userType === selectedFilter);
+                    if (selectedCity) filtered = filtered.filter((p) => p.city === selectedCity);
+                    if (selectedPosition) filtered = filtered.filter((p) => p.position === selectedPosition);
+                    if (selectedAgeMin || selectedAgeMax) {
+                      filtered = filtered.filter((p) => {
+                        const age = calculateAge(p.birthYear, p.birthMonth);
+                        if (age === null) return false;
+                        const minAge = selectedAgeMin ? parseInt(selectedAgeMin) : 0;
+                        const maxAge = selectedAgeMax ? parseInt(selectedAgeMax) : 999;
+                        return age >= minAge && age <= maxAge;
+                      });
+                    }
+                    const filteredCount = filtered.length;
+                    
+                    if (selectedFilter === null) {
+                      return `All Accounts (${filteredCount}${filteredCount !== players.length ? ` of ${players.length}` : ""})`;
+                    } else if (selectedFilter === "athlete") {
+                      return `Athletes (${filteredCount})`;
+                    } else if (selectedFilter === "mentor") {
+                      return `Mentors (${filteredCount})`;
+                    } else if (selectedFilter === "coach") {
+                      return `Coaches / Scouts (${filteredCount})`;
+                    } else {
+                      return `Parents / Admins (${filteredCount})`;
+                    }
+                  })()}
                 </h2>
                 <p className="text-sm text-[#64748B]">
                   {selectedFilter === null
@@ -153,6 +217,92 @@ export default function CoachDashboardPage() {
               >
                 {isAdminView ? "Open Explore" : "Explore Highlights"}
               </Link>
+            </div>
+
+            {/* Metric Filters */}
+            <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Filter className="w-5 h-5 text-slate-600" />
+                <h3 className="text-lg font-semibold text-[#0F172A]">Filter by Metrics</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* City Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-[#475569] mb-2">City</label>
+                  <select
+                    value={selectedCity}
+                    onChange={(e) => setSelectedCity(e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 focus:border-[#3B82F6] transition-all"
+                  >
+                    <option value="">All Cities</option>
+                    {uniqueCities.map(city => (
+                      <option key={city} value={city}>{city}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Position Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-[#475569] mb-2">Position</label>
+                  <select
+                    value={selectedPosition}
+                    onChange={(e) => setSelectedPosition(e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 focus:border-[#3B82F6] transition-all"
+                  >
+                    <option value="">All Positions</option>
+                    {uniquePositions.map(position => (
+                      <option key={position} value={position}>{position}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Age Min Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-[#475569] mb-2">Min Age</label>
+                  <select
+                    value={selectedAgeMin}
+                    onChange={(e) => setSelectedAgeMin(e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 focus:border-[#3B82F6] transition-all"
+                  >
+                    <option value="">Any</option>
+                    {Array.from({ length: 20 }, (_, i) => i + 13).map(age => (
+                      <option key={age} value={age.toString()}>{age}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Age Max Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-[#475569] mb-2">Max Age</label>
+                  <select
+                    value={selectedAgeMax}
+                    onChange={(e) => setSelectedAgeMax(e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 focus:border-[#3B82F6] transition-all"
+                  >
+                    <option value="">Any</option>
+                    {Array.from({ length: 20 }, (_, i) => i + 13).map(age => (
+                      <option key={age} value={age.toString()}>{age}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Clear Filters Button */}
+              {(selectedCity || selectedPosition || selectedAgeMin || selectedAgeMax) && (
+                <button
+                  onClick={() => {
+                    setSelectedCity("");
+                    setSelectedPosition("");
+                    setSelectedAgeMin("");
+                    setSelectedAgeMax("");
+                  }}
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-[#475569] hover:bg-slate-50 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                  Clear Filters
+                </button>
+              )}
             </div>
 
             {/* Filter Tiles */}
@@ -258,10 +408,34 @@ export default function CoachDashboardPage() {
                 ))}
               </div>
             ) : (() => {
-              const filteredPlayers =
+              // Apply all filters
+              let filteredPlayers =
                 selectedFilter === null
                   ? players
                   : players.filter((p) => p.userType === selectedFilter);
+
+              // Filter by city
+              if (selectedCity) {
+                filteredPlayers = filteredPlayers.filter((p) => p.city === selectedCity);
+              }
+
+              // Filter by position
+              if (selectedPosition) {
+                filteredPlayers = filteredPlayers.filter((p) => p.position === selectedPosition);
+              }
+
+              // Filter by age range
+              if (selectedAgeMin || selectedAgeMax) {
+                filteredPlayers = filteredPlayers.filter((p) => {
+                  const age = calculateAge(p.birthYear, p.birthMonth);
+                  if (age === null) return false;
+                  
+                  const minAge = selectedAgeMin ? parseInt(selectedAgeMin) : 0;
+                  const maxAge = selectedAgeMax ? parseInt(selectedAgeMax) : 999;
+                  
+                  return age >= minAge && age <= maxAge;
+                });
+              }
 
               if (filteredPlayers.length === 0) {
                 return (
