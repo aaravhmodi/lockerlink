@@ -373,6 +373,106 @@ export default function CoachDashboardPage() {
               </motion.button>
             </div>
 
+            {/* Metric Filters - Only show for Athletes, placed after filter tiles */}
+            {selectedFilter === "athlete" && (
+            <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Filter className="w-5 h-5 text-slate-600" />
+                <h3 className="text-lg font-semibold text-[#0F172A]">Filter Athletes by Metrics</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* City Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-[#475569] mb-2">City</label>
+                  <select
+                    value={selectedCity}
+                    onChange={(e) => setSelectedCity(e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 focus:border-[#3B82F6] transition-all"
+                  >
+                    <option value="">All Cities</option>
+                    {uniqueCities.map(city => (
+                      <option key={city} value={city}>{city}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Position Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-[#475569] mb-2">Position</label>
+                  <select
+                    value={selectedPosition}
+                    onChange={(e) => setSelectedPosition(e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 focus:border-[#3B82F6] transition-all"
+                  >
+                    <option value="">All Positions</option>
+                    {uniquePositions.map(position => (
+                      <option key={position} value={position}>{position}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Age Min Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-[#475569] mb-2">Min Age</label>
+                  <select
+                    value={selectedAgeMin}
+                    onChange={(e) => {
+                      setSelectedAgeMin(e.target.value);
+                      // If new min is greater than current max, clear max
+                      if (e.target.value && selectedAgeMax && parseInt(e.target.value) > parseInt(selectedAgeMax)) {
+                        setSelectedAgeMax("");
+                      }
+                    }}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 focus:border-[#3B82F6] transition-all"
+                  >
+                    <option value="">Any</option>
+                    {availableAges.map(age => (
+                      <option key={age} value={age.toString()}>{age}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Age Max Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-[#475569] mb-2">Max Age</label>
+                  <select
+                    value={selectedAgeMax}
+                    onChange={(e) => {
+                      setSelectedAgeMax(e.target.value);
+                      // If new max is less than current min, clear min
+                      if (e.target.value && selectedAgeMin && parseInt(e.target.value) < parseInt(selectedAgeMin)) {
+                        setSelectedAgeMin("");
+                      }
+                    }}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 focus:border-[#3B82F6] transition-all"
+                  >
+                    <option value="">Any</option>
+                    {availableAges.map(age => (
+                      <option key={age} value={age.toString()}>{age}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Clear Filters Button */}
+              {(selectedCity || selectedPosition || selectedAgeMin || selectedAgeMax) && (
+                <button
+                  onClick={() => {
+                    setSelectedCity("");
+                    setSelectedPosition("");
+                    setSelectedAgeMin("");
+                    setSelectedAgeMax("");
+                  }}
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-[#475569] hover:bg-slate-50 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                  Clear Filters
+                </button>
+              )}
+            </div>
+            )}
+
             {loadingPlayers ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[1, 2, 3, 4].map((key) => (
