@@ -68,16 +68,72 @@ export default function CoachDashboardPage() {
   const [selectedAgeMin, setSelectedAgeMin] = useState<string>("");
   const [selectedAgeMax, setSelectedAgeMax] = useState<string>("");
 
-  // Get unique cities and positions for filter dropdowns (only from athletes)
+  // Get filtered athletes first (for dynamic filter options)
+  const filteredAthletesForOptions = useMemo(() => {
+    let athletes = players.filter(p => p.userType === "athlete");
+    
+    // Apply filters that are already selected to determine available options
+    if (selectedCity) {
+      athletes = athletes.filter((p) => p.city === selectedCity);
+    }
+    if (selectedPosition) {
+      athletes = athletes.filter((p) => p.position === selectedPosition);
+    }
+    if (selectedAgeMin || selectedAgeMax) {
+      athletes = athletes.filter((p) => {
+        const age = calculateAge(p.birthYear, p.birthMonth);
+        if (age === null) return false;
+        const minAge = selectedAgeMin ? parseInt(selectedAgeMin) : 0;
+        const maxAge = selectedAgeMax ? parseInt(selectedAgeMax) : 999;
+        return age >= minAge && age <= maxAge;
+      });
+    }
+    
+    return athletes;
+  }, [players, selectedCity, selectedPosition, selectedAgeMin, selectedAgeMax]);
+
+  // Get unique cities and positions for filter dropdowns (dynamically based on other filters)
   const uniqueCities = useMemo(() => {
+    // If position or age is selected, only show cities from those filtered athletes
+    if (selectedPosition || selectedAgeMin || selectedAgeMax) {
+      return Array.from(new Set(filteredAthletesForOptions.map(p => p.city).filter(Boolean))).sort() as string[];
+    }
+    // Otherwise show all cities from all athletes
     const athletes = players.filter(p => p.userType === "athlete");
     return Array.from(new Set(athletes.map(p => p.city).filter(Boolean))).sort() as string[];
-  }, [players]);
+  }, [players, filteredAthletesForOptions, selectedPosition, selectedAgeMin, selectedAgeMax]);
 
   const uniquePositions = useMemo(() => {
+    // If city or age is selected, only show positions from those filtered athletes
+    if (selectedCity || selectedAgeMin || selectedAgeMax) {
+      return Array.from(new Set(filteredAthletesForOptions.map(p => p.position).filter(Boolean))).sort() as string[];
+    }
+    // Otherwise show all positions from all athletes
     const athletes = players.filter(p => p.userType === "athlete");
     return Array.from(new Set(athletes.map(p => p.position).filter(Boolean))).sort() as string[];
-  }, [players]);
+  }, [players, filteredAthletesForOptions, selectedCity, selectedAgeMin, selectedAgeMax]);
+
+  // Get available age range based on current filters
+  const availableAges = useMemo(() => {
+    let athletes = players.filter(p => p.userType === "athlete");
+    
+    if (selectedCity) {
+      athletes = athletes.filter((p) => p.city === selectedCity);
+    }
+    if (selectedPosition) {
+      athletes = athletes.filter((p) => p.position === selectedPosition);
+    }
+    
+    const ages = athletes
+      .map(p => calculateAge(p.birthYear, p.birthMonth))
+      .filter((age): age is number => age !== null && age >= 13 && age <= 19)
+      .sort((a, b) => a - b);
+    
+    if (ages.length === 0) return [];
+    const minAge = Math.min(...ages);
+    const maxAge = Math.max(...ages);
+    return Array.from({ length: maxAge - minAge + 1 }, (_, i) => minAge + i);
+  }, [players, selectedCity, selectedPosition]);
 
   useEffect(() => {
     if (loading) return;
@@ -265,11 +321,17 @@ export default function CoachDashboardPage() {
                   <label className="block text-sm font-medium text-[#475569] mb-2">Min Age</label>
                   <select
                     value={selectedAgeMin}
-                    onChange={(e) => setSelectedAgeMin(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedAgeMin(e.target.value);
+                      // If new min is greater than current max, clear max
+                      if (e.target.value && selectedAgeMax && parseInt(e.target.value) > parseInt(selectedAgeMax)) {
+                        setSelectedAgeMax("");
+                      }
+                    }}
                     className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 focus:border-[#3B82F6] transition-all"
                   >
                     <option value="">Any</option>
-                    {Array.from({ length: 7 }, (_, i) => i + 13).map(age => (
+                    {availableAges.map(age => (
                       <option key={age} value={age.toString()}>{age}</option>
                     ))}
                   </select>
@@ -280,11 +342,17 @@ export default function CoachDashboardPage() {
                   <label className="block text-sm font-medium text-[#475569] mb-2">Max Age</label>
                   <select
                     value={selectedAgeMax}
-                    onChange={(e) => setSelectedAgeMax(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedAgeMax(e.target.value);
+                      // If new max is less than current min, clear min
+                      if (e.target.value && selectedAgeMin && parseInt(e.target.value) < parseInt(selectedAgeMin)) {
+                        setSelectedAgeMin("");
+                      }
+                    }}
                     className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 focus:border-[#3B82F6] transition-all"
                   >
                     <option value="">Any</option>
-                    {Array.from({ length: 7 }, (_, i) => i + 13).map(age => (
+                    {availableAges.map(age => (
                       <option key={age} value={age.toString()}>{age}</option>
                     ))}
                   </select>
