@@ -269,7 +269,7 @@ export default function CoachDashboardPage() {
                     className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 focus:border-[#3B82F6] transition-all"
                   >
                     <option value="">Any</option>
-                    {Array.from({ length: 20 }, (_, i) => i + 13).map(age => (
+                    {Array.from({ length: 7 }, (_, i) => i + 13).map(age => (
                       <option key={age} value={age.toString()}>{age}</option>
                     ))}
                   </select>
@@ -284,7 +284,7 @@ export default function CoachDashboardPage() {
                     className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/20 focus:border-[#3B82F6] transition-all"
                   >
                     <option value="">Any</option>
-                    {Array.from({ length: 20 }, (_, i) => i + 13).map(age => (
+                    {Array.from({ length: 7 }, (_, i) => i + 13).map(age => (
                       <option key={age} value={age.toString()}>{age}</option>
                     ))}
                   </select>
